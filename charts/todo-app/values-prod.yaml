@@ -1,0 +1,12 @@
+backend:
+  replicas: 2
+  image:
+    tag: latest
+
+frontend:
+  replicas: 2
+  image:
+    tag: latest
+
+ingress:
+  host: todo.example.com

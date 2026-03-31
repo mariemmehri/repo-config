@@ -1,0 +1,17 @@
+backend:
+  image:
+    repository: gitopsregistory.azurecr.io/todo-backend
+    tag: latest
+  replicas: 1
+  port: 8081
+
+frontend:
+  image:
+    repository: gitopsregistory.azurecr.io/todo-frontend
+    tag: latest
+  replicas: 1
+  port: 80
+
+ingress:
+  enabled: true
+  host: todo.example.com

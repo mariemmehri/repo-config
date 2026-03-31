@@ -1,0 +1,12 @@
+backend:
+  replicas: 1
+  image:
+    tag: latest
+
+frontend:
+  replicas: 1
+  image:
+    tag: latest
+
+ingress:
+  host: todo-staging.example.com
