@@ -1,12 +1,15 @@
 backend:
   replicas: 1
   image:
+    repository: acrtodosopra.azurecr.io/todo-backend
     tag: latest
 
 frontend:
   replicas: 1
   image:
+    repository: acrtodosopra.azurecr.io/todo-frontend
     tag: latest
 
 ingress:
+  enabled: false
   host: todo-staging.example.com
