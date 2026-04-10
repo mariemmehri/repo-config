@@ -3,15 +3,13 @@ backend:
   image:
     repository: acrtodosopra.azurecr.io/todo-backend
     # Tag immuable attendu: le pipeline CI remplace cette valeur par un SHA Git.
-    tag: "bootstrap-sha"
-
+    tag: "01052f12aab702ffd3dc879b2699487e1539ead3"
 frontend:
   replicas: 1
   image:
     repository: acrtodosopra.azurecr.io/todo-frontend
     # Tag immuable attendu: le pipeline CI remplace cette valeur par un SHA Git.
-    tag: "bootstrap-sha"
-
+    tag: "01052f12aab702ffd3dc879b2699487e1539ead3"
 ingress:
   enabled: false
   host: todo-staging.example.com
