@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: todo-staging #config Argo CD (dans argocd)
+  name: todo-staging
   namespace: argocd
 spec:
   project: default
@@ -10,11 +10,13 @@ spec:
     targetRevision: main
     path: charts/todo-app
     helm:
+      # Le pipeline CI remplace ces tags par le SHA du commit.
+      # On garde ce fichier comme source de vérité GitOps.
       valueFiles:
         - values-staging.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: staging #Ton application réelle (dans staging)
+    namespace: staging
   syncPolicy:
     automated:
       prune: true

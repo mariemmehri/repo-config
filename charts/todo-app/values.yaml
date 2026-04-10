@@ -1,14 +1,16 @@
 backend:
   image:
     repository: acrtodosopra.azurecr.io/todo-backend
-    tag: latest
+    # Tag immuable attendu: le pipeline CI met ensuite un SHA Git par environnement.
+    tag: "bootstrap-sha"
   replicas: 1
   port: 8081
 
 frontend:
   image:
     repository: acrtodosopra.azurecr.io/todo-frontend
-    tag: latest
+    # Tag immuable attendu: le pipeline CI met ensuite un SHA Git par environnement.
+    tag: "bootstrap-sha"
   replicas: 1
   port: 80
 

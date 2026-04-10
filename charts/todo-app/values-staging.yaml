@@ -2,13 +2,15 @@ backend:
   replicas: 1
   image:
     repository: acrtodosopra.azurecr.io/todo-backend
-    tag: latest
+    # Tag immuable attendu: le pipeline CI remplace cette valeur par un SHA Git.
+    tag: "bootstrap-sha"
 
 frontend:
   replicas: 1
   image:
     repository: acrtodosopra.azurecr.io/todo-frontend
-    tag: latest
+    # Tag immuable attendu: le pipeline CI remplace cette valeur par un SHA Git.
+    tag: "bootstrap-sha"
 
 ingress:
   enabled: false
