@@ -3,13 +3,13 @@ backend:
   image:
     repository: acrtodosopra.azurecr.io/todo-backend
     # Tag immuable attendu: le pipeline CI remplace cette valeur par un SHA Git.
-    tag: "01052f12aab702ffd3dc879b2699487e1539ead3"
+    tag: "8d5ce9630129d6c3afcd0abd17ca9674b57444c4"
 frontend:
   replicas: 1
   image:
     repository: acrtodosopra.azurecr.io/todo-frontend
     # Tag immuable attendu: le pipeline CI remplace cette valeur par un SHA Git.
-    tag: "01052f12aab702ffd3dc879b2699487e1539ead3"
+    tag: "8d5ce9630129d6c3afcd0abd17ca9674b57444c4"
 ingress:
   enabled: false
   host: todo-staging.example.com
