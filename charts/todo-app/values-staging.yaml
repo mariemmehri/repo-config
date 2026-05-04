@@ -1,15 +1,19 @@
+registry:
+  host: europe-west1-docker.pkg.dev
+  repository: pfe-2026-495220/registry-staging-pfe
+
 backend:
   replicas: 1
   image:
-    repository: acrstagingpfe2026.azurecr.io/todo-backend
-    # Tag immuable attendu: le pipeline CI remplace cette valeur par un SHA Git.
+    name: todo-backend
     tag: "ad41670058ae7731f1ee4f9bc07482e01086ae87"
+
 frontend:
   replicas: 1
   image:
-    repository: acrstagingpfe2026.azurecr.io/todo-frontend
-    # Tag immuable attendu: le pipeline CI remplace cette valeur par un SHA Git.
+    name: todo-frontend
     tag: "ad41670058ae7731f1ee4f9bc07482e01086ae87"
+
 ingress:
   enabled: false
   host: todo-staging.example.com

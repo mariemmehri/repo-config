@@ -1,16 +1,18 @@
+registry:
+  host: ""
+  repository: ""
+
 backend:
   image:
-    repository: acrstagingpfe2026.azurecr.io/todo-backend
-    # Tag immuable attendu: le pipeline CI met ensuite un SHA Git par environnement.
-    tag: "bootstrap-sha"
+    name: todo-backend
+    tag: "latest"
   replicas: 1
   port: 8081
 
 frontend:
   image:
-    repository: acrstagingpfe2026.azurecr.io/todo-frontend
-    # Tag immuable attendu: le pipeline CI met ensuite un SHA Git par environnement.
-    tag: "bootstrap-sha"
+    name: todo-frontend
+    tag: "latest"
   replicas: 1
   port: 80
 
