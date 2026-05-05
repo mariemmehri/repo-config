@@ -18,4 +18,4 @@ frontend:
 
 ingress:
   enabled: false
-  host: todo.example.com
+  host: ""
