@@ -16,7 +16,7 @@ spec:
         - values-staging.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace:  argocd
+    namespace:  staging  
   syncPolicy:
     automated:
       prune: true
