@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: todo-staging
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io  # ← ajouter
 spec:
   project: default
   source:
@@ -10,16 +12,15 @@ spec:
     targetRevision: main
     path: charts/todo-app
     helm:
-      # Le pipeline CI remplace ces tags par le SHA du commit.
-      # On garde ce fichier comme source de vérité GitOps.
       valueFiles:
         - values-staging.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace:  staging  
+    namespace: staging
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true     # ← ajouter : évite les conflits de merge
