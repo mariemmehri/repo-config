@@ -6,8 +6,8 @@ metadata:
   namespace: argocd
   # Finalizer important — empêche la suppression accidentelle
   # ArgoCD supprime les ressources enfants proprement avant de se supprimer
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
+  # finalizers:
+  #   - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:

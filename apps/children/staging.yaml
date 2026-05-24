@@ -3,8 +3,8 @@ kind: Application
 metadata:
   name: todo-staging
   namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io  # ← ajouter
+  # finalizers:
+  #   - resources-finalizer.argocd.argoproj.io  # ← ajouter
 spec:
   project: default
   source:
