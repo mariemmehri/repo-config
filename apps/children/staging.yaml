@@ -24,3 +24,4 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true     # ← ajouter : évite les conflits de merge
+      - RespectIgnoreDifferences=true
