@@ -5,12 +5,12 @@ backend:
   replicas: 1
   image:
     name: todo-backend
-    tag: "df4def4"
+    tag: "0c933e4"
 frontend:
   replicas: 1
   image:
     name: todo-frontend
-    tag: "df4def4"
+    tag: "0c933e4"
 ingress:
   enabled: false
   host: todo-staging.example.com
