@@ -23,3 +23,24 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /api/todos
+              port: {{ .Values.backend.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/todos
+              port: {{ .Values.backend.port }}
+            initialDelaySeconds: 40
+            periodSeconds: 15
+            failureThreshold: 5

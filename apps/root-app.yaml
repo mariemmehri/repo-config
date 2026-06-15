@@ -1,23 +1,24 @@
-# # apps/root-app.yaml
-# apiVersion: argoproj.io/v1alpha1
-# kind: Application
-# metadata:
-#   name: root-app
-#   namespace: argocd
-#   # Finalizer important — empêche la suppression accidentelle
-#   # ArgoCD supprime les ressources enfants proprement avant de se supprimer
-#   finalizers:
-#     - resources-finalizer.argocd.argoproj.io
-# spec:
-#   project: default
-#   source:
-#     repoURL: https://github.com/mariemmehri/repo-config
-#     targetRevision: main
-#     path: apps/children          # surveille ce dossier entier
-#   destination:
-#     server: https://kubernetes.default.svc
-#     namespace: argocd            # les Application enfants vivent dans argocd
-#   syncPolicy:
-#     automated:
-#       prune: true                # supprime les apps enfants supprimées de Git
-#       selfHeal: true             # revert les changements manuels
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root-app
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/managed-by-bootstrap: "kubectl"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mariemmehri/repo-config
+    targetRevision: main
+    path: apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

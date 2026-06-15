@@ -20,3 +20,24 @@ spec:
           image: {{ .Values.registry.host }}/{{ .Values.registry.repository }}/{{ .Values.frontend.image.name }}:{{ .Values.frontend.image.tag }}
           ports:
             - containerPort: {{ .Values.frontend.port }}
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.frontend.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.frontend.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            failureThreshold: 5

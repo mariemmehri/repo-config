@@ -5,16 +5,30 @@ registry:
 backend:
   image:
     name: todo-backend
-    tag: "latest"
+    tag: "UNSET"
   replicas: 1
   port: 8081
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
 
 frontend:
   image:
     name: todo-frontend
-    tag: "latest"
+    tag: "UNSET"
   replicas: 1
   port: 80
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
 
 ingress:
   enabled: false
