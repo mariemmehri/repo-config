@@ -9,7 +9,7 @@ Ce dépôt est la **source de vérité GitOps** de la plateforme. ArgoCD surveil
 ```
 todo-config/
 ├── apps/
-│   ├── root-app.yaml              # (commenté — géré par Terraform bootstrap)
+│   ├── root-app.yaml              # appliqué par le job bootstrap-argocd
 │   └── children/
 │       └── staging.yaml           # Application ArgoCD pour l'environnement staging
 │
@@ -51,7 +51,7 @@ Nouveaux pods déployés avec la nouvelle image
 
 ### App-of-Apps
 
-Le `root-app` (créé par Terraform bootstrap) surveille le dossier `apps/children/`. Chaque fichier YAML dans ce dossier devient une `Application` ArgoCD gérée automatiquement.
+Le `root-app` surveille le dossier `apps/children/`. Chaque fichier YAML dans ce dossier devient une `Application` ArgoCD gérée automatiquement.
 
 Pour ajouter un nouvel environnement : créer `apps/children/production.yaml` et committer — ArgoCD le détecte et crée automatiquement la nouvelle application.
 
@@ -96,7 +96,7 @@ spec:
 
 ### `apps/root-app.yaml`
 
-Ce fichier est commenté — le root-app est géré par Terraform (`bootstrap-gitops/main.tf`). Il sert de documentation de référence pour la structure de l'objet.
+Ce fichier sert de documentation de référence pour la structure de l'objet. Le root-app est appliqué par le job `bootstrap-argocd` de `workflow-infra.yml` via `kubectl apply -f apps/root-app.yaml`.
 
 ---
 
@@ -262,4 +262,3 @@ yq eval '
 - **Ingress désactivé** — l'application n'est pas accessible de l'extérieur du cluster sans `kubectl port-forward`.
 - **Pas de resource limits/requests** dans les templates — à ajouter pour la stabilité en production.
 - **Pas de liveness/readiness probes** — Kubernetes ne sait pas si les pods sont vraiment opérationnels.
-- **GITOPS_PFE.md** contient des références à Azure (AKS, ACR) — reliquat d'une version antérieure, à mettre à jour.
