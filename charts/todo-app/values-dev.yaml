@@ -1,19 +1,16 @@
 registry:
   host: europe-west1-docker.pkg.dev
   repository: pfe-2026-495220/registry-staging-pfe
-
 backend:
   replicas: 1
   image:
     name: todo-backend
-    tag: "UNSET"
-
+    tag: "53326a8"
 frontend:
   replicas: 1
   image:
     name: todo-frontend
-    tag: "UNSET"
-
+    tag: "53326a8"
 ingress:
   enabled: false
   host: todo-dev.example.com
