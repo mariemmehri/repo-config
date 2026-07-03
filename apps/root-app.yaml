@@ -12,7 +12,7 @@ spec:
   source:
     repoURL: https://github.com/mariemmehri/repo-config
     targetRevision: main
-    path: apps
+    path: apps/children
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
