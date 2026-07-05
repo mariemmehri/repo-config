@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: todo-frontend
+  name: hr-frontend
   namespace: {{ .Release.Namespace }}
 spec:
   selector:
-    app: todo-frontend
+    app: hr-frontend
   type: ClusterIP
   ports:
     - protocol: TCP

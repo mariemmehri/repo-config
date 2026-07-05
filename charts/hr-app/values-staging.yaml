@@ -4,13 +4,13 @@ registry:
 backend:
   replicas: 1
   image:
-    name: todo-backend
+    name: hr-backend
     tag: "e651d30"
 frontend:
   replicas: 1
   image:
-    name: todo-frontend
+    name: hr-frontend
     tag: "e651d30"
 ingress:
   enabled: false
-  host: todo-staging.example.com
+  host: hr-staging.example.com

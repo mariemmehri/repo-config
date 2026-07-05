@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: todo-frontend
+  name: hr-frontend
   namespace: {{ .Release.Namespace }}
   labels:
-    app: todo-frontend
+    app: hr-frontend
 spec:
   replicas: {{ .Values.frontend.replicas }}
   selector:
     matchLabels:
-      app: todo-frontend
+      app: hr-frontend
   template:
     metadata:
       labels:
-        app: todo-frontend
+        app: hr-frontend
     spec:
       containers:
         - name: frontend

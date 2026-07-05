@@ -4,7 +4,7 @@ registry:
 
 backend:
   image:
-    name: todo-backend
+    name: hr-backend
     tag: "UNSET"
   replicas: 1
   port: 8081
@@ -18,7 +18,7 @@ backend:
 
 frontend:
   image:
-    name: todo-frontend
+    name: hr-frontend
     tag: "UNSET"
   replicas: 1
   port: 80

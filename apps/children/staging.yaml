@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/mariemmehri/repo-config
     targetRevision: main
-    path: charts/todo-app
+    path: charts/hr-app
     helm:
       valueFiles:
         - values-staging.yaml

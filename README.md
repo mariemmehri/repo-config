@@ -1,4 +1,4 @@
-# todo-config — Source de vérité GitOps
+# repo-config — Source de vérité GitOps
 
 Ce dépôt est la **source de vérité GitOps** de la plateforme. ArgoCD surveille ce dépôt en continu et réconcilie l'état du cluster Kubernetes vers l'état déclaré ici. Aucune modification directe via `kubectl` ou `helm` ne doit être faite — tout passe par Git.
 
@@ -7,13 +7,13 @@ Ce dépôt est la **source de vérité GitOps** de la plateforme. ArgoCD surveil
 ## Contenu
 
 ```
-todo-config/
+repo-config/
 ├── apps/
-│   ├── root-app.yaml              # (commenté — géré par Terraform bootstrap)
+│   ├── root-app.yaml              # Application racine, appliquée par le job bootstrap-argocd (kubectl apply)
 │   └── children/
 │       └── staging.yaml           # Application ArgoCD pour l'environnement staging
 │
-└── charts/todo-app/               # Helm chart de l'application Todo
+└── charts/hr-app/               # Helm chart de l'application RH
     ├── Chart.yaml                 # Métadonnées du chart (name, version, appVersion)
     ├── values.yaml                # Valeurs par défaut (non spécifiques à un env)
     ├── values-staging.yaml        # Overrides staging (registry, tags SHA, replicas)
@@ -32,7 +32,7 @@ todo-config/
 ### Flux de mise à jour
 
 ```
-CI Pipeline (todo-app)
+CI Pipeline (repo-app)
        │  yq patch values-staging.yaml
        │  git commit "ci: update image tags to <SHA>"
        │  git push → ce dépôt
@@ -43,7 +43,7 @@ ArgoCD détecte le changement (polling toutes les 3 min ou webhook)
 ArgoCD calcule la diff entre état Git et état cluster
        │
        ▼
-helm upgrade todo-staging (avec values-staging.yaml)
+helm upgrade hr-staging (avec values-staging.yaml)
        │
        ▼
 Nouveaux pods déployés avec la nouvelle image
@@ -65,14 +65,14 @@ Pour ajouter un nouvel environnement : créer `apps/children/production.yaml` et
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: todo-staging
+  name: hr-staging
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/mariemmehri/repo-config
     targetRevision: main
-    path: charts/todo-app
+    path: charts/hr-app
     helm:
       valueFiles:
         - values-staging.yaml    # surcharge les valeurs par défaut
@@ -100,13 +100,13 @@ Ce fichier est commenté — le root-app est géré par Terraform (`bootstrap-gi
 
 ---
 
-## Helm Chart — `charts/todo-app/`
+## Helm Chart — `charts/hr-app/`
 
 ### `Chart.yaml`
 
 ```yaml
 apiVersion: v2
-name: todo-app
+name: hr-app
 type: application
 version: 0.1.0
 appVersion: "1.0.0"
@@ -123,14 +123,14 @@ registry:
 
 backend:
   image:
-    name: todo-backend
+    name: hr-backend
     tag: "latest"
   replicas: 1
   port: 8081
 
 frontend:
   image:
-    name: todo-frontend
+    name: hr-frontend
     tag: "latest"
   replicas: 1
   port: 80
@@ -149,17 +149,17 @@ registry:
 
 backend:
   image:
-    name: todo-backend
+    name: hr-backend
     tag: "0c933e4"    # ← mis à jour automatiquement par yq dans le CI
 
 frontend:
   image:
-    name: todo-frontend
+    name: hr-frontend
     tag: "0c933e4"    # ← idem
 
 ingress:
   enabled: false
-  host: todo-staging.example.com
+  host: hr-staging.example.com
 ```
 
 ### Construction de l'URL d'image
@@ -168,17 +168,17 @@ Le template `deployment-backend.yaml` construit l'URL complète :
 
 ```yaml
 image: {{ .Values.registry.host }}/{{ .Values.registry.repository }}/{{ .Values.backend.image.name }}:{{ .Values.backend.image.tag }}
-# → europe-west1-docker.pkg.dev/pfe-2026-495220/registry-staging-pfe/todo-backend:0c933e4
+# → europe-west1-docker.pkg.dev/pfe-2026-495220/registry-staging-pfe/hr-backend:0c933e4
 ```
 
 ### Templates Kubernetes
 
 | Template | Ressource créée | Détail |
 |----------|-----------------|--------|
-| `deployment-backend.yaml` | Deployment `todo-backend` | `SPRING_PROFILES_ACTIVE=prod` |
-| `deployment-frontend.yaml` | Deployment `todo-frontend` | Image Nginx |
-| `service-backend.yaml` | Service ClusterIP | port 8081, sélecteur `app: todo-backend` |
-| `service-frontend.yaml` | Service ClusterIP | port 80, sélecteur `app: todo-frontend` |
+| `deployment-backend.yaml` | Deployment `hr-backend` | `SPRING_PROFILES_ACTIVE=prod` |
+| `deployment-frontend.yaml` | Deployment `hr-frontend` | Image Nginx |
+| `service-backend.yaml` | Service ClusterIP | port 8081, sélecteur `app: hr-backend` |
+| `service-frontend.yaml` | Service ClusterIP | port 80, sélecteur `app: hr-frontend` |
 | `ingress.yaml` | Ingress (conditionnel) | Routes `/` → frontend, `/api` → backend |
 
 ### Ingress
@@ -189,7 +189,7 @@ L'Ingress est désactivé (`ingress.enabled: false`) dans `values-staging.yaml`.
 # values-staging.yaml
 ingress:
   enabled: true
-  host: todo-staging.example.com
+  host: hr-staging.example.com
 ```
 
 Nécessite un Ingress Controller déployé sur le cluster (ex: `ingress-nginx`).
@@ -201,20 +201,20 @@ Nécessite un Ingress Controller déployé sur le cluster (ex: `ingress-nginx`).
 ### Vérifier le chart
 
 ```bash
-helm lint charts/todo-app
+helm lint charts/hr-app
 ```
 
 ### Rendu des manifests (dry-run)
 
 ```bash
 # Staging
-helm template todo-staging charts/todo-app \
-  -f charts/todo-app/values.yaml \
-  -f charts/todo-app/values-staging.yaml
+helm template hr-staging charts/hr-app \
+  -f charts/hr-app/values.yaml \
+  -f charts/hr-app/values-staging.yaml
 
 # Avec namespace
-helm template todo-staging charts/todo-app \
-  -f charts/todo-app/values-staging.yaml \
+helm template hr-staging charts/hr-app \
+  -f charts/hr-app/values-staging.yaml \
   --namespace staging
 ```
 
@@ -225,8 +225,8 @@ helm template todo-staging charts/todo-app \
 kubectl create namespace staging
 
 # Installer
-helm upgrade --install todo-staging charts/todo-app \
-  -f charts/todo-app/values-staging.yaml \
+helm upgrade --install hr-staging charts/hr-app \
+  -f charts/hr-app/values-staging.yaml \
   --namespace staging
 
 # Vérifier
@@ -237,20 +237,20 @@ kubectl get svc -n staging
 ### Désinstaller
 
 ```bash
-helm uninstall todo-staging --namespace staging
+helm uninstall hr-staging --namespace staging
 ```
 
 ---
 
 ## Mise à jour des tags d'image
 
-Le CI (GitHub Actions dans `todo-app`) met à jour les tags automatiquement via `yq` :
+Le CI (GitHub Actions dans `repo-app`) met à jour les tags automatiquement via `yq` :
 
 ```bash
 yq eval '
   .backend.image.tag = strenv(IMAGE_TAG) |
   .frontend.image.tag = strenv(IMAGE_TAG)
-' -i charts/todo-app/values-staging.yaml
+' -i charts/hr-app/values-staging.yaml
 ```
 
 **Ne jamais modifier les tags manuellement** — ils sont gérés par le pipeline et tout commit manuel sera écrasé au prochain push applicatif.

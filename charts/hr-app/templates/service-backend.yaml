@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: todo-backend
+  name: hr-backend
   namespace: {{ .Release.Namespace }}
 spec:
   selector:
-    app: todo-backend
+    app: hr-backend
   ports:
     - protocol: TCP
       port: 8081

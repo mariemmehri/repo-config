@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: todo-backend
+  name: hr-backend
   namespace: {{ .Release.Namespace }}
   labels:
-    app: todo-backend
+    app: hr-backend
 spec:
   replicas: {{ .Values.backend.replicas }}
   selector:
     matchLabels:
-      app: todo-backend
+      app: hr-backend
   template:
     metadata:
       labels:
-        app: todo-backend
+        app: hr-backend
     spec:
       containers:
         - name: backend
@@ -32,14 +32,14 @@ spec:
               memory: "512Mi"
           readinessProbe:
             httpGet:
-              path: /api/todos
+              path: /api/health-check
               port: {{ .Values.backend.port }}
             initialDelaySeconds: 20
             periodSeconds: 10
             failureThreshold: 3
           livenessProbe:
             httpGet:
-              path: /api/todos
+              path: /api/health-check
               port: {{ .Values.backend.port }}
             initialDelaySeconds: 40
             periodSeconds: 15

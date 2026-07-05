@@ -2,7 +2,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: todo-ingress
+  name: hr-ingress
   namespace: {{ .Release.Namespace }}
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
@@ -16,14 +16,14 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: todo-frontend
+                name: hr-frontend
                 port:
                   number: 80
           - path: /api
             pathType: Prefix
             backend:
               service:
-                name: todo-backend
+                name: hr-backend
                 port:
                   number: 8081
 {{- end }}
