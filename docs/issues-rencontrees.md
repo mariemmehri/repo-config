@@ -75,6 +75,44 @@ La version de Tomcat embarqué par Spring Boot 3.2.0 par défaut contenait plusi
 
 Commit correspondant : `df4def4 fix: upgrade tomcat-embed-core to 10.1.55 (CVE-2026-41293, CVE-2026-43512, CVE-2026-43515)`. Ce mécanisme (scan bloquant + override de version ciblé) est le comportement attendu du pipeline — voir [guide-securite.md](guide-securite.md) pour le détail de la configuration Trivy.
 
+## 🚀 Issue 4 — Calico ne peut pas enforcer une NetworkPolicy egress contre une ClusterIP (DNS cassé)
+
+**Symptôme observé**
+
+Après l'ajout des trois `NetworkPolicy` dans `charts/hr-app/templates/` (deny-all + isolation `hr-backend`/`hr-frontend`), la résolution DNS depuis les pods applicatifs se bloquait complètement :
+
+```
+;; connection timed out; no servers could be reached
+```
+
+Le trafic `hr-frontend → hr-backend` (autorisé explicitement) fonctionnait, mais toute résolution DNS échouait — cassant l'application en pratique, pas seulement le test.
+
+**Cause racine**
+
+La règle d'egress DNS initiale utilisait un `namespaceSelector` (`kubernetes.io/metadata.name: kube-system`), syntaxe Kubernetes NetworkPolicy standard et correcte. Or les pods résolvent le DNS via la **ClusterIP** du service `kube-dns` (`/etc/resolv.conf` pointe vers `34.118.224.10`, pas vers une IP de pod). Test isolant le problème sur le cluster live : une requête DNS directe vers l'IP d'un pod `kube-dns` (`10.52.2.2:53`) réussissait, mais la même requête vers la ClusterIP timeout — confirmant que **Calico legacy (non-Dataplane V2) sur ce cluster GKE ne peut pas enforcer une règle d'egress `NetworkPolicy` dont la destination est une ClusterIP**, seulement des IP de pod directes. Ajouter un `podSelector: k8s-app=kube-dns` en complément du `namespaceSelector` n'a rien changé — le problème n'est pas le selector, c'est le mécanisme d'enforcement lui-même face à un DNAT de Service.
+
+**Tentative de solution root-cause (abandonnée)**
+
+Une migration vers GKE Dataplane V2 (`datapath_provider = "ADVANCED_DATAPATH"` dans `modules/gke/main.tf`, à la place de `network_policy { enabled = true, provider = "CALICO" }`) a été préparée : Cilium (eBPF) résout correctement le trafic vers une ClusterIP jusqu'à ses pods backend avant d'appliquer la policy, contrairement à Calico/iptables. Ce changement nécessite de **recréer le cluster GKE** (le `datapath_provider` ne se bascule pas en place) via `destroy-staging` puis `apply`, et déclenchait aussi un nouveau finding Checkov (`CKV_GCP_12`, faux positif — le check ne reconnaît que le bloc `network_policy{enabled=true}` de Calico). Décision : **revert complet** de cette migration (`git reset --hard` sur `repo-infrastructure` + force-push) — trop de disruption pour ce cluster de staging PFE pour le bénéfice obtenu.
+
+**Solution retenue**
+
+Dans `networkpolicy-backend.yaml` et `networkpolicy-frontend.yaml`, la règle d'egress DNS utilise un `ipBlock` plutôt qu'un selector :
+
+```yaml
+egress:
+  - to:
+      - ipBlock:
+          cidr: 0.0.0.0/0
+    ports:
+      - protocol: UDP
+        port: 53
+      - protocol: TCP
+        port: 53
+```
+
+Calico peut enforcer un `ipBlock` correctement, y compris contre une ClusterIP. Contrepartie assumée : la règle autorise l'egress port 53 vers **n'importe quelle IP**, pas seulement `kube-dns` — un pod compromis pourrait exfiltrer des données via DNS tunneling vers un serveur externe sans être bloqué par cette policy. C'est un compromis documenté, pas la solution idéale ; voir [guide-securite.md](guide-securite.md) pour le détail de la limite acceptée.
+
 ## 🔗 Pour la suite
 
 - Détail du pipeline CI où le scan Trivy s'exécute : [lifecycle-pipeline.md](lifecycle-pipeline.md)
