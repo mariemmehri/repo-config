@@ -56,7 +56,10 @@ ingress:
   host: ""
 
 networkPolicy:
-  enabled: false
+  enabled: true
+  # ClusterIP du service kube-dns — dépend du cluster, override par environnement.
+  # Récupérable via: kubectl get svc kube-dns -n kube-system -o jsonpath='{.spec.clusterIP}'
+  dnsClusterIP: ""
 ```
 
 **`values-staging.yaml`** — les overrides réels pour l'environnement staging :
@@ -76,9 +79,12 @@ ingress:
   host: hr-staging.example.com
 networkPolicy:
   enabled: true
+  dnsClusterIP: "34.118.224.10"
 ```
 
-`values-staging.yaml` active `networkPolicy.enabled` (contrairement à `values.yaml`, qui le laisse à `false` par défaut pour ne pas casser un `helm template`/`helm install` local sans egress DNS configuré). `values-staging.yaml` ne redéfinit **pas** `resources` — Helm fusionne les deux fichiers de values, donc `backend.resources`/`frontend.resources` de `values.yaml` s'appliquent tels quels en staging. **Les champs `backend.image.tag` et `frontend.image.tag` de `values-staging.yaml` sont gérés automatiquement par le CI de `repo-app`** (patch `yq`, voir [lifecycle-pipeline.md](lifecycle-pipeline.md)) — ne jamais les modifier à la main, le prochain push applicatif les écrasera.
+`values-staging.yaml` ne redéfinit **pas** `resources` — Helm fusionne les deux fichiers de values, donc `backend.resources`/`frontend.resources` de `values.yaml` s'appliquent tels quels en staging. **Les champs `backend.image.tag` et `frontend.image.tag` de `values-staging.yaml` sont gérés automatiquement par le CI de `repo-app`** (patch `yq`, voir [lifecycle-pipeline.md](lifecycle-pipeline.md)) — ne jamais les modifier à la main, le prochain push applicatif les écrasera.
+
+`networkPolicy.dnsClusterIP` est en revanche **à renseigner à la main par environnement** — ce n'est pas une valeur portable d'un cluster à l'autre : la ClusterIP de `kube-dns` est attribuée par GKE à la création du cluster et change si le cluster est recréé (ex: `destroy-staging` puis `apply`). `values.yaml` la laisse vide (`""`) pour que l'absence de valeur soit visible immédiatement (policy egress DNS invalide) plutôt que de pointer silencieusement sur une IP obsolète.
 
 L'Application ArgoCD `hr-staging` référence explicitement `helm.valueFiles: [values-staging.yaml]` — c'est ArgoCD qui applique la fusion `values.yaml` (défauts du chart) + `values-staging.yaml` (overrides), exactement comme le ferait `helm template -f values.yaml -f values-staging.yaml`.
 
@@ -92,8 +98,8 @@ L'Application ArgoCD `hr-staging` référence explicitement `helm.valueFiles: [v
 | `service-frontend.yaml` | Service ClusterIP `hr-frontend` | `frontend.port` (comme `targetPort` ; le `port` exposé, `80`, est en dur) |
 | `ingress.yaml` | Ingress `hr-ingress` (conditionnel) | `ingress.enabled` (garde `{{- if }}`), `ingress.host` |
 | `networkpolicy-default-deny.yaml` | NetworkPolicy `default-deny-all` (conditionnel) | `networkPolicy.enabled` (garde `{{- if }}`) — `podSelector: {}` sur tout le namespace |
-| `networkpolicy-backend.yaml` | NetworkPolicy `hr-backend` (conditionnel) | `networkPolicy.enabled`, `backend.port` (ingress depuis `app: hr-frontend` + egress DNS vers `kube-system`) |
-| `networkpolicy-frontend.yaml` | NetworkPolicy `hr-frontend` (conditionnel) | `networkPolicy.enabled`, `frontend.port`, `backend.port` (ingress ouvert, egress limité à `hr-backend` + DNS) |
+| `networkpolicy-backend.yaml` | NetworkPolicy `hr-backend` (conditionnel) | `networkPolicy.enabled`, `backend.port`, `networkPolicy.dnsClusterIP` (ingress depuis `app: hr-frontend` + egress DNS scopé à la ClusterIP `kube-dns`) |
+| `networkpolicy-frontend.yaml` | NetworkPolicy `hr-frontend` (conditionnel) | `networkPolicy.enabled`, `frontend.port`, `backend.port`, `networkPolicy.dnsClusterIP` (ingress ouvert, egress limité à `hr-backend` + DNS scopé) |
 
 Les `resources` (requests/limits CPU et mémoire) sont injectées via :
 ```yaml

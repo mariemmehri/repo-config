@@ -95,9 +95,9 @@ La règle d'egress DNS initiale utilisait un `namespaceSelector` (`kubernetes.io
 
 Une migration vers GKE Dataplane V2 (`datapath_provider = "ADVANCED_DATAPATH"` dans `modules/gke/main.tf`, à la place de `network_policy { enabled = true, provider = "CALICO" }`) a été préparée : Cilium (eBPF) résout correctement le trafic vers une ClusterIP jusqu'à ses pods backend avant d'appliquer la policy, contrairement à Calico/iptables. Ce changement nécessite de **recréer le cluster GKE** (le `datapath_provider` ne se bascule pas en place) via `destroy-staging` puis `apply`, et déclenchait aussi un nouveau finding Checkov (`CKV_GCP_12`, faux positif — le check ne reconnaît que le bloc `network_policy{enabled=true}` de Calico). Décision : **revert complet** de cette migration (`git reset --hard` sur `repo-infrastructure` + force-push) — trop de disruption pour ce cluster de staging PFE pour le bénéfice obtenu.
 
-**Solution retenue**
+**Solution retenue (v1) — `ipBlock: 0.0.0.0/0`**
 
-Dans `networkpolicy-backend.yaml` et `networkpolicy-frontend.yaml`, la règle d'egress DNS utilise un `ipBlock` plutôt qu'un selector :
+Dans `networkpolicy-backend.yaml` et `networkpolicy-frontend.yaml`, la règle d'egress DNS a d'abord utilisé un `ipBlock` ouvert plutôt qu'un selector :
 
 ```yaml
 egress:
@@ -111,7 +111,31 @@ egress:
         port: 53
 ```
 
-Calico peut enforcer un `ipBlock` correctement, y compris contre une ClusterIP. Contrepartie assumée : la règle autorise l'egress port 53 vers **n'importe quelle IP**, pas seulement `kube-dns` — un pod compromis pourrait exfiltrer des données via DNS tunneling vers un serveur externe sans être bloqué par cette policy. C'est un compromis documenté, pas la solution idéale ; voir [guide-securite.md](guide-securite.md) pour le détail de la limite acceptée.
+Calico peut enforcer un `ipBlock` correctement, y compris contre une ClusterIP — contrairement à un `podSelector`/`namespaceSelector`. Mais cette première version acceptait une contrepartie non idéale : la règle autorisait l'egress port 53 vers **n'importe quelle IP**, pas seulement `kube-dns` — un pod compromis aurait pu exfiltrer des données via DNS tunneling vers un serveur externe sans être bloqué.
+
+**Solution retenue (v2) — `ipBlock` scopé à la ClusterIP `kube-dns` en `/32`**
+
+Le point bloquant de la v1 n'était pas l'usage d'un `ipBlock` en soi, mais son ouverture à `0.0.0.0/0`. Puisque Calico enforce correctement un `ipBlock` contre une ClusterIP (contrairement à un selector), il suffisait de restreindre le CIDR à la ClusterIP réelle du service `kube-dns` :
+
+```yaml
+egress:
+  - to:
+      - ipBlock:
+          cidr: {{ .Values.networkPolicy.dnsClusterIP }}/32
+    ports:
+      - protocol: UDP
+        port: 53
+      - protocol: TCP
+        port: 53
+```
+
+`networkPolicy.dnsClusterIP` est une nouvelle valeur du chart (`values.yaml` : `""` par défaut, `values-staging.yaml` : `"34.118.224.10"`, récupérée via `kubectl get svc kube-dns -n kube-system -o jsonpath='{.spec.clusterIP}'`), documentée dans [guide-helm-chart.md](guide-helm-chart.md).
+
+**Validation en test live (cluster staging, avant commit)** — pour éviter qu'ArgoCD `selfHeal` n'écrase un test manuel, l'auto-sync a été temporairement désactivé sur `root-app` **et** `hr-staging` (l'App-of-Apps propage `selfHeal` en cascade : patcher seulement `hr-staging` ne suffit pas, `root-app` le restaure depuis Git), puis restauré immédiatement après :
+- Un pod de debug labellisé `app: hr-frontend` (héritant de sa NetworkPolicy) résout `hr-backend.staging.svc.cluster.local` sans problème avec l'`ipBlock` scopé au `/32` — stable sur 8 requêtes répétées.
+- Une requête DNS vers une IP hors de ce bloc (`8.8.8.8`) timeout systématiquement — confirmant que l'ouverture `0.0.0.0/0` de la v1 est bien refermée.
+
+Conclusion de l'investigation initiale à revoir : l'échec du `namespaceSelector`/`podSelector` ne prouvait pas que **tout** ciblage de la ClusterIP échoue avec Calico legacy — seulement que ce mécanisme de *selector* ne sait pas relier un pod matché au trafic post-DNAT. Un `ipBlock`, lui, matche directement l'IP de destination du paquet (avant DNAT côté kube-proxy), donc cibler la ClusterIP via `ipBlock` fonctionne. Voir [guide-securite.md](guide-securite.md) pour le détail à jour de cette mesure de sécurité.
 
 ## 🔗 Pour la suite
 

@@ -35,4 +35,7 @@ ingress:
   host: ""
 
 networkPolicy:
-  enabled: false
+  enabled: true
+  # ClusterIP du service kube-dns — dépend du cluster, override par environnement.
+  # Récupérable via: kubectl get svc kube-dns -n kube-system -o jsonpath='{.spec.clusterIP}'
+  dnsClusterIP: ""

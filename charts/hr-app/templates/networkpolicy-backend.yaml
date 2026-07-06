@@ -22,7 +22,7 @@ spec:
   egress:
     - to:
         - ipBlock:
-            cidr: 0.0.0.0/0
+            cidr: {{ .Values.networkPolicy.dnsClusterIP }}/32
       ports:
         - protocol: UDP
           port: 53
