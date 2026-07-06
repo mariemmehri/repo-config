@@ -21,9 +21,8 @@ spec:
           port: {{ .Values.backend.port }}
   egress:
     - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
+        - ipBlock:
+            cidr: 0.0.0.0/0
       ports:
         - protocol: UDP
           port: 53
