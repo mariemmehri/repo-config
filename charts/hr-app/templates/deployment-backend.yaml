@@ -24,12 +24,7 @@ spec:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
           resources:
-            requests:
-              cpu: "100m"
-              memory: "256Mi"
-            limits:
-              cpu: "500m"
-              memory: "512Mi"
+            {{- .Values.backend.resources | toYaml | nindent 12 }}
           readinessProbe:
             httpGet:
               path: /api/health-check

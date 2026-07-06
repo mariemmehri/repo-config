@@ -33,3 +33,6 @@ frontend:
 ingress:
   enabled: false
   host: ""
+
+networkPolicy:
+  enabled: false
