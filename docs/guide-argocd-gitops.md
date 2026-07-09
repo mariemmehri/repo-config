@@ -27,7 +27,8 @@ Expliquer comment fonctionne le pattern **App-of-Apps** dans ce projet (`apps/ro
 │  source.path       : charts/hr-app                            │
 │  source.helm.valueFiles : [values-staging.yaml]                │
 │  destination.namespace  : staging                              │
-│  ignoreDifferences  : Deployment /status/terminatingReplicas   │
+│  ignoreDifferences  : Deployment /status/terminatingReplicas,  │
+│                       StatefulSet /spec/volumeClaimTemplates/0/status │
 │  syncPolicy.automated : prune=true, selfHeal=true                │
 │  syncOptions : CreateNamespace=true, ServerSideApply=true,       │
 │                RespectIgnoreDifferences=true                    │
@@ -50,6 +51,8 @@ Les deux Applications activent :
 Concrètement, **toute modification doit passer par un commit dans `repo-config`** — un `kubectl apply` ou `kubectl edit` manuel sur le namespace `staging` sera défait par ArgoCD dans les minutes qui suivent.
 
 `hr-staging` ajoute en plus `ignoreDifferences` sur `group: apps, kind: Deployment, jsonPointers: [/status/terminatingReplicas]` — ce champ de status fluctue naturellement pendant les rolling updates et ferait apparaître le Deployment comme "OutOfSync" sans réelle dérive ; `RespectIgnoreDifferences=true` dans `syncOptions` est nécessaire pour que ce bloc soit effectivement pris en compte lors du calcul du diff.
+
+Même mécanisme pour le `StatefulSet` `postgres` (`charts/hr-app/templates/statefulset-postgres.yaml`) : une deuxième entrée `ignoreDifferences` cible `group: apps, kind: StatefulSet, jsonPointers: [/spec/volumeClaimTemplates/0/status]`. Dès qu'un `PersistentVolumeClaim` est créé à partir d'un `volumeClaimTemplates`, l'API server injecte un sous-objet `status` (ex: `{phase: Pending}`) dans le template lui-même — un champ absent du manifeste rendu par Helm. Sans cette exception, ArgoCD compare éternellement "rien" (Git) à "status: {phase: Pending}" (cluster) et affiche le StatefulSet comme `OutOfSync` en permanence, même quand le pod est `Healthy` et qu'aucune vraie dérive n'existe — constaté en pratique juste après le premier déploiement de `postgres-0` sur le cluster staging.
 
 ## 🚀 Étape 2 — Observer une synchronisation avec `kubectl`
 
