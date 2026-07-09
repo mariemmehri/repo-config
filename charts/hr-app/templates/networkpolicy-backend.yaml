@@ -28,4 +28,13 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+    {{- if .Values.postgres.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - protocol: TCP
+          port: {{ .Values.postgres.port }}
+    {{- end }}
 {{- end }}
