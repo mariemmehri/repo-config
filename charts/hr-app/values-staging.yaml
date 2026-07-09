@@ -5,12 +5,12 @@ backend:
   replicas: 1
   image:
     name: hr-backend
-    tag: "4be830e"
+    tag: "3db0308"
 frontend:
   replicas: 1
   image:
     name: hr-frontend
-    tag: "4be830e"
+    tag: "3db0308"
 ingress:
   enabled: false
   host: hr-staging.example.com
