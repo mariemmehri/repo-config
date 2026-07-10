@@ -100,10 +100,13 @@ spec:
         - name: run
           emptyDir: {}
   volumeClaimTemplates:
-    - metadata:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
         name: data
       spec:
         accessModes: ["ReadWriteOnce"]
+        volumeMode: Filesystem
         {{- if .Values.postgres.storage.className }}
         storageClassName: {{ .Values.postgres.storage.className }}
         {{- end }}

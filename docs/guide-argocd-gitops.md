@@ -28,6 +28,7 @@ Expliquer comment fonctionne le pattern **App-of-Apps** dans ce projet (`apps/ro
 │  source.helm.valueFiles : [values-staging.yaml]                │
 │  destination.namespace  : staging                              │
 │  ignoreDifferences  : Deployment /status/terminatingReplicas,  │
+│                       Deployment /spec/replicas,                │
 │                       StatefulSet /spec/volumeClaimTemplates/0/status │
 │  syncPolicy.automated : prune=true, selfHeal=true                │
 │  syncOptions : CreateNamespace=true, ServerSideApply=true,       │
@@ -53,6 +54,10 @@ Concrètement, **toute modification doit passer par un commit dans `repo-config`
 `hr-staging` ajoute en plus `ignoreDifferences` sur `group: apps, kind: Deployment, jsonPointers: [/status/terminatingReplicas]` — ce champ de status fluctue naturellement pendant les rolling updates et ferait apparaître le Deployment comme "OutOfSync" sans réelle dérive ; `RespectIgnoreDifferences=true` dans `syncOptions` est nécessaire pour que ce bloc soit effectivement pris en compte lors du calcul du diff.
 
 Même mécanisme pour le `StatefulSet` `postgres` (`charts/hr-app/templates/statefulset-postgres.yaml`) : une deuxième entrée `ignoreDifferences` cible `group: apps, kind: StatefulSet, jsonPointers: [/spec/volumeClaimTemplates/0/status]`. Dès qu'un `PersistentVolumeClaim` est créé à partir d'un `volumeClaimTemplates`, l'API server injecte un sous-objet `status` (ex: `{phase: Pending}`) dans le template lui-même — un champ absent du manifeste rendu par Helm. Sans cette exception, ArgoCD compare éternellement "rien" (Git) à "status: {phase: Pending}" (cluster) et affiche le StatefulSet comme `OutOfSync` en permanence, même quand le pod est `Healthy` et qu'aucune vraie dérive n'existe — constaté en pratique juste après le premier déploiement de `postgres-0` sur le cluster staging.
+
+Ce premier correctif n'a réglé qu'une partie du problème : l'API server injecte aussi `apiVersion: v1`, `kind: PersistentVolumeClaim` et `volumeMode: Filesystem` dans `spec.volumeClaimTemplates[0]`, trois champs statiques (pas du `status`) que `jsonPointers: [.../status]` ne couvre pas. Plutôt que d'allonger encore la liste `ignoreDifferences`, `statefulset-postgres.yaml` déclare directement ces trois champs dans le template Helm — le manifeste rendu par Git correspond alors exactement à ce que le cluster stocke, à l'exception du seul champ réellement dynamique (`status`), qui reste couvert par l'exception ci-dessus.
+
+Troisième entrée `ignoreDifferences` : `group: apps, kind: Deployment, jsonPointers: [/spec/replicas]`. Nécessaire depuis l'ajout du `HorizontalPodAutoscaler` `hr-backend` (`charts/hr-app/templates/hpa-backend.yaml`, voir [guide-helm-chart.md](guide-helm-chart.md)) : `deployment-backend.yaml` déclare un `spec.replicas` statique piloté par `backend.replicas`, mais une fois le HPA actif c'est lui qui patch `spec.replicas` du Deployment en fonction de la charge CPU. Sans cette exception, `selfHeal: true` reverterait le scaling du HPA au prochain cycle de réconciliation ArgoCD — le Deployment reviendrait à `replicas: 1` en boucle pendant qu'un test de charge est en cours, empêchant tout scale-up réel d'être observé. Contrepartie assumée : ce pointeur JSON s'applique à **tous** les Deployments du chart (donc aussi `hr-frontend`, qui n'a pas de HPA) — changer `frontend.replicas` dans `values.yaml` ne serait alors plus appliqué par `selfHeal` non plus, acceptable pour l'instant car un seul Deployment a de l'autoscaling.
 
 ## 🚀 Étape 2 — Observer une synchronisation avec `kubectl`
 

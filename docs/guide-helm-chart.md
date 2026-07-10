@@ -18,6 +18,7 @@ charts/hr-app/
     ├── deployment-frontend.yaml   # Deployment hr-frontend
     ├── statefulset-postgres.yaml  # StatefulSet postgres conditionnel ({{- if .Values.postgres.enabled }})
     ├── secret-postgres.yaml       # Secret postgres-credentials conditionnel (créé seulement si existingSecretName est vide)
+    ├── hpa-backend.yaml           # HorizontalPodAutoscaler hr-backend conditionnel ({{- if .Values.backend.autoscaling.enabled }})
     ├── service-backend.yaml       # Service ClusterIP hr-backend (port 8081)
     ├── service-frontend.yaml      # Service ClusterIP hr-frontend (port 80)
     ├── service-postgres.yaml      # Service headless postgres (clusterIP: None), conditionnel
@@ -46,6 +47,11 @@ backend:
   resources:
     requests: { cpu: "100m", memory: "256Mi" }
     limits:   { cpu: "500m", memory: "512Mi" }
+  autoscaling:
+    enabled: false   # activé explicitement dans values-staging.yaml
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 70
 
 frontend:
   image: { name: hr-frontend, tag: "UNSET" }
@@ -91,6 +97,8 @@ registry:
 backend:
   replicas: 1
   image: { name: hr-backend, tag: "e651d30" }
+  autoscaling:
+    enabled: true   # hérite minReplicas/maxReplicas/targetCPUUtilizationPercentage de values.yaml
 frontend:
   replicas: 1
   image: { name: hr-frontend, tag: "e651d30" }
@@ -116,6 +124,7 @@ L'Application ArgoCD `hr-staging` référence explicitement `helm.valueFiles: [v
 | `deployment-frontend.yaml` | Deployment `hr-frontend` | `frontend.replicas`, `registry.host`, `registry.repository`, `frontend.image.name`, `frontend.image.tag`, `frontend.port`, `frontend.resources` |
 | `statefulset-postgres.yaml` | StatefulSet `postgres` (conditionnel) | `postgres.enabled` (garde `{{- if }}`), `postgres.image.repository`/`tag`, `postgres.port`, `postgres.auth.existingSecretName` (sinon `postgres-credentials`), `postgres.resources`, `postgres.storage.size`/`className` (via `volumeClaimTemplates`) |
 | `secret-postgres.yaml` | Secret `postgres-credentials` (conditionnel) | `postgres.enabled` **et** `postgres.auth.existingSecretName` vide (garde `{{- if and }}`) — sinon un Secret externe (créé hors Git) est utilisé à la place ; `postgres.auth.database`/`username`/`password` |
+| `hpa-backend.yaml` | HorizontalPodAutoscaler `hr-backend` (conditionnel) | `backend.autoscaling.enabled` (garde `{{- if }}`), `backend.autoscaling.minReplicas`/`maxReplicas`/`targetCPUUtilizationPercentage` — cible le Deployment `hr-backend` sur une métrique CPU (`autoscaling/v2`) |
 | `service-backend.yaml` | Service ClusterIP `hr-backend` | `backend.port` (comme `targetPort` ; le `port` exposé, `8081`, est en dur) |
 | `service-frontend.yaml` | Service ClusterIP `hr-frontend` | `frontend.port` (comme `targetPort` ; le `port` exposé, `80`, est en dur) |
 | `service-postgres.yaml` | Service headless `postgres` (conditionnel, `clusterIP: None`) | `postgres.enabled`, `postgres.port` (comme `port` et `targetPort`) — nom `postgres` en dur, c'est le `DB_HOST` attendu par `deployment-backend.yaml` |
@@ -135,6 +144,8 @@ resources:
 Chaque Deployment expose une `readinessProbe`/`livenessProbe` HTTP GET sur son propre port :
 - Backend : `/api/health-check` (délai initial 20 s / 40 s).
 - Frontend : `/` (délai initial 10 s / 20 s).
+
+**Autoscaling (`hpa-backend.yaml`)** : `backend.autoscaling.enabled: true` en staging active un `HorizontalPodAutoscaler` sur `hr-backend`, basé sur le % d'utilisation CPU par rapport à `backend.resources.requests.cpu` (le HPA ne fonctionne pas sans une `requests.cpu` définie). Le `metrics-server` requis par HPA est un composant GKE standard, déjà présent sur le cluster — rien à installer. Point d'attention important : `deployment-backend.yaml` a un `spec.replicas` statique piloté par `backend.replicas`, mais une fois le HPA actif c'est lui qui doit décider du nombre de replicas réel — voir [guide-argocd-gitops.md](guide-argocd-gitops.md) pour l'entrée `ignoreDifferences` nécessaire côté ArgoCD pour que `selfHeal` ne revert pas le scaling du HPA.
 
 ## ✅ Tester le chart en local avant de committer
 

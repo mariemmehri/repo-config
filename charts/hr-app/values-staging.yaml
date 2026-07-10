@@ -6,6 +6,8 @@ backend:
   image:
     name: hr-backend
     tag: "3db0308"
+  autoscaling:
+    enabled: true
 frontend:
   replicas: 1
   image:
