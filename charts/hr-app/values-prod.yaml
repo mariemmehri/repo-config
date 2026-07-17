@@ -1,0 +1,23 @@
+registry:
+  host: europe-west1-docker.pkg.dev
+  repository: pfe-2026-495220/registry-prod-pfe
+backend:
+  replicas: 2
+  image:
+    name: hr-backend
+    tag: "UNSET"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+frontend:
+  replicas: 2
+  image:
+    name: hr-frontend
+    tag: "UNSET"
+ingress:
+  enabled: false
+  host: hr-prod.example.com
+networkPolicy:
+  enabled: true
+  dnsClusterIP: "34.118.224.10"
