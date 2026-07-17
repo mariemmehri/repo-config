@@ -5,7 +5,7 @@ backend:
   replicas: 2
   image:
     name: hr-backend
-    tag: "UNSET"
+    tag: "v0.1.0"
   autoscaling:
     enabled: true
     minReplicas: 2
@@ -14,7 +14,7 @@ frontend:
   replicas: 2
   image:
     name: hr-frontend
-    tag: "UNSET"
+    tag: "v0.1.0"
 ingress:
   enabled: false
   host: hr-prod.example.com
