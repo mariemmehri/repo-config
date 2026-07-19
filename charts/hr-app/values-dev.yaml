@@ -5,14 +5,14 @@ backend:
   replicas: 1
   image:
     name: hr-backend
-    tag: "4c3f76e"
+    tag: "d788d87"
   autoscaling:
     enabled: false
 frontend:
   replicas: 1
   image:
     name: hr-frontend
-    tag: "4c3f76e"
+    tag: "d788d87"
 ingress:
   enabled: false
   host: hr-dev.example.com
