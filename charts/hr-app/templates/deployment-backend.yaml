@@ -15,6 +15,15 @@ spec:
       labels:
         app: hr-backend
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: hr-backend
+                topologyKey: kubernetes.io/hostname
       containers:
         - name: backend
           image: {{ .Values.registry.host }}/{{ .Values.registry.repository }}/{{ .Values.backend.image.name }}:{{ .Values.backend.image.tag }}
