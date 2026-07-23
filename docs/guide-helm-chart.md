@@ -16,17 +16,13 @@ charts/hr-app/
 └── templates/
     ├── deployment-backend.yaml    # Deployment hr-backend
     ├── deployment-frontend.yaml   # Deployment hr-frontend
-    ├── statefulset-postgres.yaml  # StatefulSet postgres conditionnel ({{- if .Values.postgres.enabled }})
-    ├── secret-postgres.yaml       # Secret postgres-credentials conditionnel (créé seulement si existingSecretName est vide)
     ├── hpa-backend.yaml           # HorizontalPodAutoscaler hr-backend conditionnel ({{- if .Values.backend.autoscaling.enabled }})
     ├── service-backend.yaml       # Service ClusterIP hr-backend (port 8081)
     ├── service-frontend.yaml      # Service ClusterIP hr-frontend (port 80)
-    ├── service-postgres.yaml      # Service headless postgres (clusterIP: None), conditionnel
     ├── ingress.yaml                # Ingress conditionnel ({{- if .Values.ingress.enabled }})
     ├── networkpolicy-default-deny.yaml  # Deny-all ingress+egress conditionnel ({{- if .Values.networkPolicy.enabled }})
-    ├── networkpolicy-backend.yaml        # Ingress hr-backend limité à hr-frontend + egress DNS + postgres
-    ├── networkpolicy-frontend.yaml       # Egress hr-frontend limité à hr-backend + DNS
-    └── networkpolicy-postgres.yaml       # Ingress postgres limité à hr-backend, egress fermé
+    ├── networkpolicy-backend.yaml        # Ingress hr-backend limité à hr-frontend + egress DNS
+    └── networkpolicy-frontend.yaml       # Egress hr-frontend limité à hr-backend + DNS
 ```
 
 Il n'y a ni `_helpers.tpl`, ni `NOTES.txt`, ni `values-dev.yaml` aujourd'hui — un seul environnement (`staging`) est couvert.
@@ -60,22 +56,6 @@ frontend:
   resources:
     requests: { cpu: "50m", memory: "64Mi" }
     limits:   { cpu: "200m", memory: "128Mi" }
-
-postgres:
-  enabled: true
-  image: { repository: postgres, tag: "16-alpine" }
-  port: 5432
-  auth:
-    existingSecretName: ""   # nom d'un Secret existant à utiliser à la place des champs ci-dessous
-    database: hrdb
-    username: hruser
-    password: "hrpass"
-  storage:
-    size: 5Gi
-    className: ""            # vide = StorageClass par défaut du cluster (standard-rwo sur GKE)
-  resources:
-    requests: { cpu: "100m", memory: "256Mi" }
-    limits:   { cpu: "500m", memory: "512Mi" }
 
 ingress:
   enabled: false
@@ -120,19 +100,15 @@ L'Application ArgoCD `hr-staging` référence explicitement `helm.valueFiles: [v
 
 | Template | Ressource | `.Values.*` utilisés |
 |---|---|---|
-| `deployment-backend.yaml` | Deployment `hr-backend` | `backend.replicas`, `registry.host`, `registry.repository`, `backend.image.name`, `backend.image.tag`, `backend.port`, `backend.resources`, et si `postgres.enabled` : `postgres.port`, `postgres.auth.existingSecretName` (sinon `postgres-credentials`) pour les env vars `DB_HOST`/`DB_PORT`/`DB_NAME`/`DB_USER`/`DB_PASSWORD` |
+| `deployment-backend.yaml` | Deployment `hr-backend` | `backend.replicas`, `registry.host`, `registry.repository`, `backend.image.name`, `backend.image.tag`, `backend.port`, `backend.resources` |
 | `deployment-frontend.yaml` | Deployment `hr-frontend` | `frontend.replicas`, `registry.host`, `registry.repository`, `frontend.image.name`, `frontend.image.tag`, `frontend.port`, `frontend.resources` |
-| `statefulset-postgres.yaml` | StatefulSet `postgres` (conditionnel) | `postgres.enabled` (garde `{{- if }}`), `postgres.image.repository`/`tag`, `postgres.port`, `postgres.auth.existingSecretName` (sinon `postgres-credentials`), `postgres.resources`, `postgres.storage.size`/`className` (via `volumeClaimTemplates`) |
-| `secret-postgres.yaml` | Secret `postgres-credentials` (conditionnel) | `postgres.enabled` **et** `postgres.auth.existingSecretName` vide (garde `{{- if and }}`) — sinon un Secret externe (créé hors Git) est utilisé à la place ; `postgres.auth.database`/`username`/`password` |
 | `hpa-backend.yaml` | HorizontalPodAutoscaler `hr-backend` (conditionnel) | `backend.autoscaling.enabled` (garde `{{- if }}`), `backend.autoscaling.minReplicas`/`maxReplicas`/`targetCPUUtilizationPercentage` — cible le Deployment `hr-backend` sur une métrique CPU (`autoscaling/v2`) |
 | `service-backend.yaml` | Service ClusterIP `hr-backend` | `backend.port` (comme `targetPort` ; le `port` exposé, `8081`, est en dur) |
 | `service-frontend.yaml` | Service ClusterIP `hr-frontend` | `frontend.port` (comme `targetPort` ; le `port` exposé, `80`, est en dur) |
-| `service-postgres.yaml` | Service headless `postgres` (conditionnel, `clusterIP: None`) | `postgres.enabled`, `postgres.port` (comme `port` et `targetPort`) — nom `postgres` en dur, c'est le `DB_HOST` attendu par `deployment-backend.yaml` |
 | `ingress.yaml` | Ingress `hr-ingress` (conditionnel) | `ingress.enabled` (garde `{{- if }}`), `ingress.host` |
 | `networkpolicy-default-deny.yaml` | NetworkPolicy `default-deny-all` (conditionnel) | `networkPolicy.enabled` (garde `{{- if }}`) — `podSelector: {}` sur tout le namespace |
-| `networkpolicy-backend.yaml` | NetworkPolicy `hr-backend` (conditionnel) | `networkPolicy.enabled`, `backend.port`, `networkPolicy.dnsClusterIP`, et si `postgres.enabled` : `postgres.port` (ingress depuis `app: hr-frontend` + egress DNS scopé à la ClusterIP `kube-dns` + egress vers `app: postgres`) |
+| `networkpolicy-backend.yaml` | NetworkPolicy `hr-backend` (conditionnel) | `networkPolicy.enabled`, `backend.port`, `networkPolicy.dnsClusterIP` (ingress depuis `app: hr-frontend` + egress DNS scopé à la ClusterIP `kube-dns`) |
 | `networkpolicy-frontend.yaml` | NetworkPolicy `hr-frontend` (conditionnel) | `networkPolicy.enabled`, `frontend.port`, `backend.port`, `networkPolicy.dnsClusterIP` (ingress ouvert, egress limité à `hr-backend` + DNS scopé) |
-| `networkpolicy-postgres.yaml` | NetworkPolicy `postgres` (conditionnel) | `networkPolicy.enabled` **et** `postgres.enabled` (garde `{{- if and }}`), `postgres.port` (ingress depuis `app: hr-backend` uniquement ; `egress: []` — Postgres n'a besoin d'aucune connexion sortante, pas même DNS) |
 
 Les `resources` (requests/limits CPU et mémoire) sont injectées via :
 ```yaml

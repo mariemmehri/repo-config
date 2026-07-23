@@ -35,31 +35,6 @@ frontend:
       cpu: "200m"
       memory: "128Mi"
 
-postgres:
-  enabled: true
-  image:
-    repository: postgres
-    tag: "16-alpine"
-  port: 5432
-  auth:
-    # Nom d'un Secret existant (créé hors Git) à utiliser à la place des champs ci-dessous.
-    # Recommandé pour tout environnement au-delà de la démo locale.
-    existingSecretName: ""
-    database: hrdb
-    username: hruser
-    password: "hrpass"
-  storage:
-    size: 5Gi
-    # Vide = StorageClass par défaut du cluster (standard-rwo sur GKE)
-    className: ""
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "256Mi"
-    limits:
-      cpu: "500m"
-      memory: "512Mi"
-
 ingress:
   enabled: false
   host: ""

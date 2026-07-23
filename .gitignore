@@ -1,0 +1,3 @@
+# Dépendances Helm téléchargées par `helm dependency update` (ex: le sous-chart Bitnami
+# postgresql) — ne pas vendorer leur contenu, Chart.lock suffit à figer la version.
+charts/hr-app/charts/

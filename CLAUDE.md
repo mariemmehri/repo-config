@@ -23,14 +23,14 @@ repo-config/
 │   ├── values-staging.yaml      # staging overrides — image tags patched automatically by repo-app's CI (yq)
 │   └── templates/
 │       ├── deployment-backend.yaml / deployment-frontend.yaml
-│       ├── statefulset-postgres.yaml   # conditional: postgres.enabled
-│       ├── secret-postgres.yaml        # conditional: postgres.enabled && !postgres.auth.existingSecretName
 │       ├── hpa-backend.yaml            # conditional: backend.autoscaling.enabled
-│       ├── service-backend.yaml / service-frontend.yaml / service-postgres.yaml (headless)
+│       ├── service-backend.yaml / service-frontend.yaml
 │       ├── ingress.yaml                # conditional: ingress.enabled (false today)
-│       └── networkpolicy-{default-deny,backend,frontend,postgres}.yaml  # conditional: networkPolicy.enabled
+│       └── networkpolicy-{default-deny,backend,frontend}.yaml  # conditional: networkPolicy.enabled
 └── docs/                         # deep-dive guides (French) — see index below
 ```
+
+There is no database in this stack — the chart has no persistence layer, no StatefulSet, and no Postgres dependency.
 
 ## Common Commands
 
@@ -88,7 +88,7 @@ Both Applications run `syncPolicy.automated: {prune: true, selfHeal: true}` — 
 
 ## Known discrepancy
 
-`README.md`'s "Limitations actuelles" section (no resource limits, no probes, Azure/AKS references in `GITOPS_PFE.md`) is **stale** — the chart has since grown `resources` (requests/limits), readiness/liveness probes on every workload, `hpa-backend.yaml`, a `postgres` StatefulSet with a hardened `securityContext`, and four `NetworkPolicy` templates. Trust `docs/*.md` and the templates themselves over `README.md`/`GITOPS_PFE.md` for current state. Ingress being disabled (`ingress.enabled: false`, reachable only via `kubectl port-forward`) is the one limitation still accurate.
+`README.md`'s "Limitations actuelles" section (no resource limits, no probes, Azure/AKS references in `GITOPS_PFE.md`) is **stale** — the chart has since grown `resources` (requests/limits), readiness/liveness probes on every workload, `hpa-backend.yaml`, and three `NetworkPolicy` templates. Trust `docs/*.md` and the templates themselves over `README.md`/`GITOPS_PFE.md` for current state. Ingress being disabled (`ingress.enabled: false`, reachable only via `kubectl port-forward`) is the one limitation still accurate.
 
 ## `docs/` index
 

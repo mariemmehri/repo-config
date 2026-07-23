@@ -23,10 +23,6 @@ spec:
       jsonPointers:
         - /status/terminatingReplicas
         - /spec/replicas
-    - group: apps
-      kind: StatefulSet
-      jsonPointers:
-        - /spec/volumeClaimTemplates/0/status
   # Pas de syncPolicy.automated : la prod ne se synchronise JAMAIS seule.
   # Un commit sur values-prod.yaml met l'app OutOfSync; le déploiement réel
   # exige un sync manuel (UI ArgoCD ou `argocd app sync hr-prod`).
