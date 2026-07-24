@@ -1,0 +1,44 @@
+# staging's default-deny-all (from charts/hr-app) blocks everything by
+# default. Unlike hr-backend/hr-frontend, CNPG's instance manager needs to
+# reach the Kubernetes API server directly (it polls/updates the Cluster CR
+# status) — nothing in this namespace needed that before, so the gap was
+# never visible until pg-staging's initdb pod timed out reaching it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-cnpg
+  namespace: staging
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: pg-staging
+  policyTypes:
+    - Ingress
+    - Egress
+  # Egress is fully open (not scoped like hr-backend/hr-frontend's rules).
+  # Tried scoping it to the known destinations CNPG actually needs (K8s API
+  # server, DNS, GCS on 443, GCE metadata server on 169.254.169.254:80 for
+  # Workload Identity) and empirically confirmed the specific metadata-server
+  # rule never matches real traffic even though it's a textbook-correct
+  # NetworkPolicy — GKE's Workload Identity metadata proxy appears to rewrite
+  # the destination at the node level before Calico's policy enforcement
+  # sees it, so a rule pinned to 169.254.169.254 doesn't apply to whatever
+  # the post-rewrite packet actually looks like. A blanket allow verified
+  # working; the pinned rule verified NOT working, back-to-back, same pod.
+  # Ingress stays scoped (see below) — this is deliberately egress-only.
+  egress:
+    - {}
+  ingress:
+    # Future repo-app reconnection (hr-backend) and manual psql/testing from
+    # within the namespace.
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 5432
+    # CNPG operator / barman-cloud plugin control-plane calls (status API,
+    # switchover orchestration, etc.) from cnpg-system.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system

@@ -8,6 +8,9 @@ backend:
     tag: "UNSET"
   replicas: 1
   port: 8081
+  database:
+    enabled: false
+    secretName: ""
   resources:
     requests:
       cpu: "100m"

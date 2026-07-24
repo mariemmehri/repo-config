@@ -32,6 +32,23 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
+            {{- if .Values.backend.database.enabled }}
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.database.secretName }}
+                  key: jdbc-uri
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.database.secretName }}
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.database.secretName }}
+                  key: password
+            {{- end }}
           resources:
             {{- .Values.backend.resources | toYaml | nindent 12 }}
           readinessProbe:

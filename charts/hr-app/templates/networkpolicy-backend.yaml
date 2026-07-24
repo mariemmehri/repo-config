@@ -28,4 +28,13 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+    {{- if .Values.backend.database.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: pg-staging
+      ports:
+        - protocol: TCP
+          port: 5432
+    {{- end }}
 {{- end }}

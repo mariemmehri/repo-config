@@ -8,6 +8,9 @@ backend:
     tag: "228b1f3"
   autoscaling:
     enabled: true
+  database:
+    enabled: true
+    secretName: "pg-staging-app"
 frontend:
   replicas: 1
   image:
