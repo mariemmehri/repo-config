@@ -18,9 +18,15 @@ repo-config/
 │   └── children/
 │       ├── dev.yaml            # ArgoCD Application "hr-dev" → charts/hr-app + values-dev.yaml → ns dev
 │       ├── staging.yaml        # ArgoCD Application "hr-staging" → charts/hr-app + values-staging.yaml → ns staging
-│       └── prod.yaml           # ArgoCD Application "hr-prod" → charts/hr-app + values-prod.yaml → ns prod (no automated syncPolicy)
+│       ├── prod.yaml           # ArgoCD Application "hr-prod" → charts/hr-app + values-prod.yaml → ns prod (no automated syncPolicy)
+│       ├── cert-manager.yaml           # sync-wave -2 — TLS prereq for the CNPG barman-cloud backup plugin
+│       ├── cnpg-operator.yaml          # sync-wave -1 — CloudNativePG operator (chart `cloudnative-pg` 0.29.0), ns cnpg-system
+│       ├── cnpg-plugin-barman-cloud.yaml  # sync-wave -1 — barman-cloud backup plugin for CNPG
+│       ├── cnpg-cluster-staging.yaml   # sync-wave 0 — CNPG `Cluster` CR `pg-staging` (Postgres 16, db/owner `hrapp`), ns staging, GCS backups via Workload Identity
+│       └── cnpg-network-policy.yaml    # NetworkPolicy allowing port 5432 into pg-staging from staging + cnpg-system
+├── manifests/cnpg-network-policy/networkpolicy-postgres.yaml  # the raw manifest cnpg-network-policy.yaml's Application points at
 ├── charts/hr-app/
-│   ├── Chart.yaml               # no `dependencies:` — a Postgres sub-chart was added, then fully removed (see Known discrepancy)
+│   ├── Chart.yaml               # no `dependencies:` — CNPG is deployed as independent ArgoCD Applications above, not a Helm sub-chart dependency of hr-app
 │   ├── values.yaml               # chart defaults — deliberately non-deployable (empty registry, tag "UNSET")
 │   ├── values-dev.yaml           # dev overrides — registry-staging-pfe, backend.autoscaling.enabled: false
 │   ├── values-staging.yaml       # staging overrides — image tags patched automatically by repo-app's CI (yq)
@@ -34,7 +40,7 @@ repo-config/
 └── docs/                         # deep-dive guides (French) — see index below
 ```
 
-There is no database in this stack — the chart has no persistence layer, no StatefulSet, and no Postgres dependency.
+Postgres exists again in `staging`, but as a self-managed CloudNativePG `Cluster` CR (via the `apps/children/cnpg-*.yaml` Applications above), not a `StatefulSet` and not a Helm sub-chart dependency of `hr-app`. `charts/hr-app/templates/deployment-backend.yaml` conditionally (`backend.database.enabled`) injects `SPRING_DATASOURCE_URL`/`USERNAME`/`PASSWORD` from the CNPG-generated secret `pg-staging-app`; only `values-staging.yaml` sets `database.enabled: true` today (`dev`/`prod` stay on the `false` default, and there's no dev/prod CNPG cluster either). `repo-app`'s backend now has the JPA/JDBC dependency reconnected (see `repo-app/CLAUDE.md`) but still no business-domain entities beyond a connectivity-check one.
 
 ## Common Commands
 
@@ -94,7 +100,7 @@ All three children carry identical `ignoreDifferences`, load-bearing, not decora
 - Deployment `/spec/replicas` — needed because `hpa-backend.yaml` patches this field at runtime; without the exception `selfHeal`/a sync would revert HPA scaling back to `backend.replicas` every reconcile loop (this exception applies to *all* Deployments in the chart, including `hr-frontend`, which has no HPA).
 - Deployment `/status/terminatingReplicas` — fluctuates naturally during rolling updates.
 
-There is no `StatefulSet` `ignoreDifferences` entry (and no `StatefulSet` in the chart at all — see Known discrepancy below).
+There is no `StatefulSet` `ignoreDifferences` entry (and no `StatefulSet` in the chart at all — Postgres runs as a CNPG `Cluster` CR outside `charts/hr-app`, see below).
 
 ## Known discrepancy
 
@@ -102,7 +108,7 @@ There is no `StatefulSet` `ignoreDifferences` entry (and no `StatefulSet` in the
 
 `README.md` and `docs/guide-argocd-gitops.md` are *also* stale on environment count — both still describe `apps/children/` as holding a single `staging.yaml`/`hr-staging` Application. Three exist today (`hr-dev`, `hr-staging`, `hr-prod`); see App-of-Apps above.
 
-A Postgres `StatefulSet` + HPA briefly existed in this chart (commits `fa12a0c`, `3c86ac4`) and was fully removed in the most recent commit (`83792b4`) — the chart is genuinely back to having no database/persistence layer, not merely undocumented; don't go looking for Postgres templates or a `Chart.yaml` dependency.
+A Postgres `StatefulSet` + HPA briefly existed in `charts/hr-app` (commits `fa12a0c`, `3c86ac4`) and was fully removed (`83792b4`) — don't go looking for a Postgres template or `Chart.yaml` dependency there, that stays gone. Postgres came back afterward (commits `2058586`, `6422edf`) as a separate CNPG `Cluster` CR managed by its own `apps/children/cnpg-*.yaml` Applications, wired to `hr-backend` only via the `backend.database.enabled` env vars in `deployment-backend.yaml` — architecturally unrelated to the removed `StatefulSet` approach.
 
 ## `docs/` index
 
