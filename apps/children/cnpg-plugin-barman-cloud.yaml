@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cnpg-plugin-barman-cloud
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # Same wave as cnpg-operator: independent of it, but must land after
+    # cert-manager (wave "-2") and before cnpg-cluster-staging (wave "0")
+    # actually references this plugin in its .cluster.plugins list.
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  source:
+    repoURL: https://cloudnative-pg.io/charts
+    chart: plugin-barman-cloud
+    targetRevision: 0.7.0
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cnpg-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cnpg-operator
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # First use of sync-wave in this repo: the CNPG operator's CRDs must
+    # exist before the cnpg-cluster-* Application (wave "0") applies its
+    # Cluster CR — without this ordering a missing-CRD failure is silent
+    # (permanently degraded Application) rather than loud.
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  source:
+    repoURL: https://cloudnative-pg.io/charts
+    chart: cloudnative-pg
+    targetRevision: 0.29.0
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cnpg-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

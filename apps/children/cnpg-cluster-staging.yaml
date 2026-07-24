@@ -1,0 +1,99 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cnpg-cluster-staging
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # Must land after cnpg-operator's CRDs exist (wave "-1").
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://cloudnative-pg.io/charts
+    chart: cluster
+    targetRevision: 0.8.1
+    helm:
+      values: |
+        type: postgresql
+        version:
+          postgresql: "16"
+
+        # Top-level (not under cluster:) — pins the Cluster's (and its
+        # Services'/Secrets'/ServiceAccount's) name regardless of this
+        # Application/Helm release's own name. repo-infrastructure's
+        # Workload Identity binding targets this exact name in staging.
+        fullnameOverride: pg-staging
+
+        cluster:
+          instances: 1
+
+          storage:
+            size: 5Gi
+            storageClass: standard-rwo
+
+          enableSuperuserAccess: true
+
+          # Future repo-app JPA reconnection targets this database/owner —
+          # generates the pg-staging-app Secret with host/port/dbname/user/password.
+          initdb:
+            database: hrapp
+            owner: hrapp
+
+          # No monitoring stack (kube-prometheus-stack) exists in this
+          # platform yet — leave disabled until that's added separately.
+          monitoring:
+            enabled: false
+
+          # Binds the Cluster's auto-generated ServiceAccount ("pg-staging"
+          # in this namespace) to the GSA created by repo-infrastructure's
+          # modules/cnpg_backup, via GKE Workload Identity — no key file.
+          serviceAccountTemplate:
+            metadata:
+              annotations:
+                iam.gke.io/gcp-service-account: sa-cnpg-staging-backup@pfe-2026-495220.iam.gserviceaccount.com
+
+          # Requires cnpg-plugin-barman-cloud.yaml (and its cert-manager
+          # prerequisite) to already be synced — see sync-wave ordering.
+          plugins:
+            - name: barman-cloud.cloudnative-pg.io
+              enabled: true
+              isWALArchiver: true
+
+        # Wires the plugin above to a GCS ObjectStore CR the chart generates
+        # from this block. Uses GKE Workload Identity (gkeEnvironment: true)
+        # via the pg-staging ServiceAccount annotated above — no key file,
+        # so no credentials Secret is needed either (secret.create: false).
+        backups:
+          enabled: true
+          provider: google
+          method: plugin
+          pluginConfiguration:
+            name: barman-cloud.cloudnative-pg.io
+          secret:
+            create: false
+          google:
+            # Paste the value of `terraform output cnpg_backup_bucket_name`
+            # from repo-infrastructure's environments/staging after apply.
+            bucket: cnpg-backup-staging-pfe-2026-495220
+            path: "/"
+            gkeEnvironment: true
+          retentionPolicy: "30d"
+          scheduledBackups:
+            - name: daily-backup
+              schedule: "0 0 0 * * *"
+              backupOwnerReference: self
+              method: plugin
+              pluginConfiguration:
+                name: barman-cloud.cloudnative-pg.io
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
