@@ -18,4 +18,3 @@ ingress:
   host: hr-dev.example.com
 networkPolicy:
   enabled: true
-  dnsClusterIP: "34.118.224.10"
