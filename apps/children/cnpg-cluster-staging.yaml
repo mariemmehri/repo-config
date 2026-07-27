@@ -27,11 +27,35 @@ spec:
         fullnameOverride: pg-staging
 
         cluster:
-          instances: 1
+          instances: 3
+
+          # HA requires: (1) repo-infrastructure's GKE node pool actually has
+          # >= 3 Ready nodes (GitHub vars NODE_COUNT=3/MAX_NODE_COUNT=4, applied
+          # via a separate Terraform PR + staging-apply approval) BEFORE this
+          # merges, and (2) topologyKey overridden to hostname — the chart's
+          # own default (topology.kubernetes.io/zone) is a no-op on this
+          # single-zone (europe-west1-b) cluster, since every node shares the
+          # same zone label. "preferred" (not "required") is deliberate: it
+          # degrades to soft co-location if the node pool isn't ready yet
+          # instead of leaving replica pods Pending forever.
+          affinity:
+            topologyKey: kubernetes.io/hostname
+            podAntiAffinityType: preferred
 
           storage:
             size: 5Gi
             storageClass: standard-rwo
+
+          # req == limit (Guaranteed QoS) — without this, pods have no
+          # CPU/memory floor and OOM/CPU starvation on the small e2-standard-2
+          # nodes can masquerade as a CNPG failover event.
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "250m"
+              memory: "512Mi"
 
           enableSuperuserAccess: true
 
