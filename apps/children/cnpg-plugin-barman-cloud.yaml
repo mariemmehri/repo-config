@@ -19,6 +19,11 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: cnpg-system
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /status/terminatingReplicas
   syncPolicy:
     automated:
       prune: true

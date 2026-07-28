@@ -118,6 +118,7 @@ spec:
   # "no automated policy on anything prod" philosophy elsewhere in this repo.
   # A prod Postgres HA topology change should never auto-apply; deployment
   # requires an explicit `argocd app sync cnpg-cluster-prod`.
-  syncOptions:
-    - CreateNamespace=true
-    - ServerSideApply=true
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
