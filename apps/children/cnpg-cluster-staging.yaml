@@ -27,7 +27,12 @@ spec:
         fullnameOverride: pg-staging
 
         cluster:
-          instances: 3
+          # Single-instance in dev/staging; only prod runs HA (3 instances) —
+          # scaled down from 3 here as part of moving to one CNPG Cluster per
+          # environment. affinity block below is inert at instances=1 but
+          # left in place (minimal diff, harmless, and ready if staging HA is
+          # revisited later).
+          instances: 1
 
           # HA requires: (1) repo-infrastructure's GKE node pool actually has
           # >= 3 Ready nodes (GitHub vars NODE_COUNT=3/MAX_NODE_COUNT=4, applied
