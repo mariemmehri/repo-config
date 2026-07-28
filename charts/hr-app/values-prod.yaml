@@ -10,6 +10,9 @@ backend:
     enabled: true
     minReplicas: 2
     maxReplicas: 5
+  database:
+    enabled: true
+    secretName: "pg-prod-app"
 frontend:
   replicas: 2
   image:

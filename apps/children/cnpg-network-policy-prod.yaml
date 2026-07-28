@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cnpg-network-policy-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # Must exist before pg-prod's pods start (wave "0") — same wave as
+    # cnpg-operator/cnpg-plugin-barman-cloud, ahead of cnpg-cluster-prod.
+    # Kept on automated sync (unlike cnpg-cluster-prod.yaml itself) since a
+    # firewall rule landing early is harmless and must be in place regardless
+    # of when the Cluster's own manual sync happens.
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mariemmehri/repo-config
+    targetRevision: main
+    path: manifests/cnpg-network-policy-prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
