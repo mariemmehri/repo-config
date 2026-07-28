@@ -20,15 +20,31 @@ spec:
         - protocol: TCP
           port: {{ .Values.backend.port }}
   egress:
-    # GKE Dataplane V2 (Cilium/anetd) still does not enforce a namespaceSelector/
-    # podSelector egress rule against traffic routed via the kube-dns ClusterIP
-    # (what /etc/resolv.conf actually uses) — verified live: pod-IP-targeted
-    # queries work, ClusterIP-targeted queries time out. Only ipBlock on the
-    # ClusterIP itself is reliably enforced pre-DNAT. See docs/issues-rencontrees.md
-    # Issue 4 — this is not Calico-specific as previously assumed.
+    # GKE's NodeLocal DNSCache intercepts kube-dns-ClusterIP:53 traffic and
+    # answers from a per-node `node-local-dns` pod instead — confirmed live via
+    # `cilium-dbg monitor --type drop`, which showed egress actually landing on
+    # the node-local-dns pod IP, not kube-dns, and being denied because only
+    # kube-dns was allowed. Both peers are needed: kube-dns for any node without
+    # (or bypassing) the cache, node-local-dns for the real common path.
     - to:
-        - ipBlock:
-            cidr: {{ .Values.networkPolicy.dnsClusterIP }}/32
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: node-local-dns
       ports:
         - protocol: UDP
           port: 53

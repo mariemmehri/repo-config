@@ -45,4 +45,3 @@ ingress:
 
 networkPolicy:
   enabled: true
-  dnsClusterIP: ""
