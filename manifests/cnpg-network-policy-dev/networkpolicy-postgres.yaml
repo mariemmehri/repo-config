@@ -1,0 +1,34 @@
+# dev's default-deny-all (from charts/hr-app) blocks everything by default.
+# CNPG's instance manager needs to reach the Kubernetes API server directly
+# (it polls/updates the Cluster CR status) — mirrors staging's policy.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-cnpg
+  namespace: dev
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: pg-dev
+  policyTypes:
+    - Ingress
+    - Egress
+  # Egress is fully open (not scoped like hr-backend/hr-frontend's rules) —
+  # see manifests/cnpg-network-policy/networkpolicy-postgres.yaml (staging)
+  # for why a GCE-metadata-server-scoped rule was tried and found not to work
+  # under GKE Workload Identity.
+  egress:
+    - {}
+  ingress:
+    # hr-backend (in this namespace) and manual psql/testing.
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 5432
+    # CNPG operator / barman-cloud plugin control-plane calls (status API,
+    # switchover orchestration, etc.) from cnpg-system.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system

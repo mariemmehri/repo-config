@@ -8,6 +8,9 @@ backend:
     tag: "d2efe71"
   autoscaling:
     enabled: false
+  database:
+    enabled: true
+    secretName: "pg-dev-app"
 frontend:
   replicas: 1
   image:
