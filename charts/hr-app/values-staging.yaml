@@ -11,6 +11,7 @@ backend:
   database:
     enabled: true
     secretName: "pg-staging-app"
+    cnpgClusterName: "pg-staging"
 frontend:
   replicas: 1
   image:
@@ -21,3 +22,4 @@ ingress:
   host: hr-staging.example.com
 networkPolicy:
   enabled: true
+  dnsClusterIP: "34.118.224.10"

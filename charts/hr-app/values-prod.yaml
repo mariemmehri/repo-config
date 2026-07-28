@@ -13,6 +13,7 @@ backend:
   database:
     enabled: true
     secretName: "pg-prod-app"
+    cnpgClusterName: "pg-prod"
 frontend:
   replicas: 2
   image:
@@ -23,3 +24,4 @@ ingress:
   host: hr-prod.example.com
 networkPolicy:
   enabled: true
+  dnsClusterIP: "34.118.224.10"

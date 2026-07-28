@@ -20,16 +20,15 @@ spec:
         - protocol: TCP
           port: {{ .Values.backend.port }}
   egress:
-    # Dataplane V2 (Cilium) resolves the kube-dns ClusterIP to its backing
-    # pods before enforcing NetworkPolicy, unlike Calico — so this selector
-    # survives a cluster recreate with no hardcoded/env-specific IP to update.
+    # GKE Dataplane V2 (Cilium/anetd) still does not enforce a namespaceSelector/
+    # podSelector egress rule against traffic routed via the kube-dns ClusterIP
+    # (what /etc/resolv.conf actually uses) — verified live: pod-IP-targeted
+    # queries work, ClusterIP-targeted queries time out. Only ipBlock on the
+    # ClusterIP itself is reliably enforced pre-DNAT. See docs/issues-rencontrees.md
+    # Issue 4 — this is not Calico-specific as previously assumed.
     - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              k8s-app: kube-dns
+        - ipBlock:
+            cidr: {{ .Values.networkPolicy.dnsClusterIP }}/32
       ports:
         - protocol: UDP
           port: 53
@@ -39,7 +38,7 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              cnpg.io/cluster: pg-staging
+              cnpg.io/cluster: {{ .Values.backend.database.cnpgClusterName }}
       ports:
         - protocol: TCP
           port: 5432
