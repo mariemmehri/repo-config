@@ -42,6 +42,7 @@ frontend:
 ingress:
   enabled: false
   host: ""
+  staticIpName: ""
 
 networkPolicy:
   enabled: true

@@ -42,7 +42,7 @@ repo-config/
 │       ├── deployment-backend.yaml / deployment-frontend.yaml  # both set a soft podAntiAffinity (topologyKey: kubernetes.io/hostname)
 │       ├── hpa-backend.yaml            # conditional: backend.autoscaling.enabled
 │       ├── service-backend.yaml / service-frontend.yaml
-│       ├── ingress.yaml                # conditional: ingress.enabled (false today)
+│       ├── ingress.yaml                # conditional: ingress.enabled (true in all 3 envs) — native GKE/GCE Ingress, not ingress-nginx
 │       └── networkpolicy-{default-deny,backend,frontend}.yaml  # conditional: networkPolicy.enabled
 └── docs/                         # deep-dive guides (French) — see index below
 ```
@@ -113,7 +113,7 @@ There is no `StatefulSet` `ignoreDifferences` entry (and no `StatefulSet` in the
 
 ## Known discrepancy
 
-`README.md`'s "Limitations actuelles" section (no resource limits, no probes, Azure/AKS references in `GITOPS_PFE.md`) is **stale** — the chart has since grown `resources` (requests/limits), readiness/liveness probes on every workload, `hpa-backend.yaml`, and three `NetworkPolicy` templates. Trust `docs/*.md` and the templates themselves over `README.md`/`GITOPS_PFE.md` for current state. Ingress being disabled (`ingress.enabled: false`, reachable only via `kubectl port-forward`) is the one limitation still accurate.
+`README.md`'s "Limitations actuelles" section (no resource limits, no probes, Azure/AKS references in `GITOPS_PFE.md`) is **stale** — the chart has since grown `resources` (requests/limits), readiness/liveness probes on every workload, `hpa-backend.yaml`, three `NetworkPolicy` templates, and a working GCE Ingress. Trust `docs/*.md` and the templates themselves over `README.md`/`GITOPS_PFE.md` for current state. Ingress being disabled used to be the one limitation still accurate — it no longer is: `ingress.yaml` now renders a native GKE/GCE Ingress (`kubernetes.io/ingress.class: "gce"`, no ingress-nginx controller involved) and `ingress.enabled: true` in all three `values-<env>.yaml`, each bound to its own reserved static IP (`ingress.staticIpName`) and a hosts-file-only domain (`ingress.host`, `hr-<env>.local`) — no public DNS, no TLS yet.
 
 `README.md`, `docs/guide-argocd-gitops.md`, `docs/guide-helm-chart.md`, `docs/architecture-globale.md`, `docs/decisions-architecture.md`, and `docs/lifecycle-pipeline.md` are *also* stale on environment count — all of them predate `dev`/`prod` and still describe `apps/children/` as holding a single `staging.yaml`/`hr-staging` Application and the chart as having only `values.yaml`+`values-staging.yaml`. Three environments exist today (`hr-dev`, `hr-staging`, `hr-prod`); see App-of-Apps above. None of these docs mention CNPG/Postgres at all (not even the single-env staging version) — that entire subsystem, across all three environments, is undocumented outside this file and the inline comments in `apps/children/cnpg-*.yaml`/`manifests/cnpg-network-policy*/`. Trust this file and the actual manifests over any of those docs for current environment/CNPG state; they were left as-is rather than rewritten wholesale (see repo convention of flagging staleness here instead of chasing every doc).
 

@@ -18,7 +18,8 @@ frontend:
     name: hr-frontend
     tag: "2e5169e"
 ingress:
-  enabled: false
-  host: hr-staging.example.com
+  enabled: true
+  host: hr-staging.local
+  staticIpName: ip-hr-staging
 networkPolicy:
   enabled: true

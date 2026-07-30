@@ -5,20 +5,13 @@ metadata:
   name: hr-ingress
   namespace: {{ .Release.Namespace }}
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: {{ .Values.ingress.staticIpName }}
 spec:
-  ingressClassName: nginx
   rules:
     - host: {{ .Values.ingress.host }}
       http:
         paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: hr-frontend
-                port:
-                  number: 80
           - path: /api
             pathType: Prefix
             backend:
@@ -26,4 +19,11 @@ spec:
                 name: hr-backend
                 port:
                   number: 8081
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hr-frontend
+                port:
+                  number: 80
 {{- end }}

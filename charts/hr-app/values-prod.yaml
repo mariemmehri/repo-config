@@ -20,7 +20,8 @@ frontend:
     name: hr-frontend
     tag: "v2.0.0"
 ingress:
-  enabled: false
-  host: hr-prod.example.com
+  enabled: true
+  host: hr-prod.local
+  staticIpName: ip-hr-prod
 networkPolicy:
   enabled: true

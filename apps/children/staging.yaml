@@ -23,6 +23,11 @@ spec:
       jsonPointers:
         - /status/terminatingReplicas
         - /spec/replicas
+    - group: networking.k8s.io
+      kind: Ingress
+      jsonPointers:
+        - /metadata/annotations
+        - /metadata/finalizers
   syncPolicy:
     automated:
       prune: true

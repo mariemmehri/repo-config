@@ -151,13 +151,13 @@ docker run --rm -v "$(pwd):/work" -w /work alpine/helm:3.14.0 \
   template hr-staging charts/hr-app -f charts/hr-app/values.yaml -f charts/hr-app/values-staging.yaml
 ```
 
-## 🚀 Ingress (désactivé aujourd'hui)
+## 🚀 Ingress (GCE natif, activé dans les 3 environnements)
 
-`values.yaml` et `values-staging.yaml` mettent tous les deux `ingress.enabled: false` — l'application n'est donc accessible que via `kubectl port-forward svc/hr-frontend -n staging 8080:80`, jamais depuis l'extérieur du cluster. Pour l'activer, il faudrait :
-1. Un ingress-nginx controller déployé sur le cluster (absent aujourd'hui).
-2. Passer `ingress.enabled: true` dans `values-staging.yaml` (le `host` `hr-staging.example.com` est déjà pré-rempli).
+`ingress.yaml` utilise le contrôleur Ingress **natif de GKE** (`kubernetes.io/ingress.class: "gce"`) — pas de pod contrôleur à installer, contrairement à ingress-nginx. Chaque `values-<env>.yaml` a `ingress.enabled: true`, un `ingress.host` (`hr-dev.local`/`hr-staging.local`/`hr-prod.local` — domaines qui ne résolvent qu'en local, via le fichier hosts, faute de domaine public possédé) et un `ingress.staticIpName` (`ip-hr-dev`/`ip-hr-staging`/`ip-hr-prod`, réservé côté Terraform dans `repo-infrastructure/environments/staging/main.tf`). Pas de TLS pour l'instant — HTTP simple, un `ManagedCertificate` Google ne pouvant pas se valider sur un domaine non résolvable publiquement.
 
-Le template `ingress.yaml` route déjà `/` vers `hr-frontend:80` et `/api` vers `hr-backend:8081` — le routage est prêt, seule l'activation manque.
+Les Services `hr-backend`/`hr-frontend` portent l'annotation `cloud.google.com/neg: '{"ingress": true}'` pour le container-native load balancing (NEG) qu'exploite l'Ingress GCE — requiert un cluster VPC-native (c'est le cas de `gke-staging-pfe`).
+
+Le template route `/api` vers `hr-backend:8081` et `/` vers `hr-frontend:80`, comme avant.
 
 ## 🔗 Pour la suite
 
