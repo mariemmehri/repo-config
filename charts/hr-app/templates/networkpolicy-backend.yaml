@@ -19,6 +19,18 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.backend.port }}
+    # GCE Ingress health checks hit the pod directly via the NEG (container-native
+    # load balancing) from GCP's own prober ranges, not from an hr-frontend pod —
+    # without this, the backend service never passes its health check and every
+    # /api request 502s at the load balancer, even though the pod itself is Ready.
+    - from:
+        - ipBlock:
+            cidr: 130.211.0.0/22
+        - ipBlock:
+            cidr: 35.191.0.0/16
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.port }}
   egress:
     # GKE's NodeLocal DNSCache intercepts kube-dns-ClusterIP:53 traffic and
     # answers from a per-node `node-local-dns` pod instead — confirmed live via
