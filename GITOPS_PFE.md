@@ -1,5 +1,7 @@
 # Documentation GitOps - PFE
 
+> Note historique : ce document couvre uniquement la décision initiale (course de synchronisation sur le CRD `Application`) et l'architecture staging d'origine (un seul environnement, pas de CNPG). Le contexte est étendu et tenu à jour dans [docs/issues-rencontrees.md](docs/issues-rencontrees.md) (Issue 1) ; l'état actuel à trois environnements (dev/staging/prod) + PostgreSQL (CNPG) est décrit dans [docs/architecture-globale.md](docs/architecture-globale.md) et [CLAUDE.md](CLAUDE.md). Garder ce fichier tel quel pour l'historique de la décision, ne pas le prendre comme référence de l'état actuel du système.
+
 ## Objectif
 
 Mettre en place un workflow GitOps fiable avec ArgoCD sans erreur intermittente sur le CRD `Application`.
