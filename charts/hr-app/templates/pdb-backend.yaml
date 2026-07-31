@@ -1,0 +1,12 @@
+{{- if .Values.backend.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: hr-backend
+  namespace: {{ .Release.Namespace }}
+spec:
+  minAvailable: {{ .Values.backend.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      app: hr-backend
+{{- end }}

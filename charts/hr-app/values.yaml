@@ -24,6 +24,9 @@ backend:
     minReplicas: 1
     maxReplicas: 3
     targetCPUUtilizationPercentage: 70
+  pdb:
+    enabled: false
+    minAvailable: 1
 
 frontend:
   image:
