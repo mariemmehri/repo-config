@@ -24,7 +24,7 @@ frontend:
     tag: "2e5169e"
 ingress:
   enabled: true
-  host: hr-staging.local
+  host: HR4YOU.com
   staticIpName: ip-hr-staging
   tls:
     enabled: true
