@@ -21,7 +21,7 @@ frontend:
     tag: "v2.0.0"
 ingress:
   enabled: true
-  host: hr-prod.local
+  host: HR4YOUP.com
   staticIpName: ip-hr-prod
 networkPolicy:
   enabled: true
