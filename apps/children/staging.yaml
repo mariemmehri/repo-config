@@ -26,11 +26,8 @@ spec:
     - group: networking.k8s.io
       kind: Ingress
       jsonPointers:
+        - /metadata/annotations
         - /metadata/finalizers
-        - /metadata/annotations/ingress.kubernetes.io~1backends
-        - /metadata/annotations/ingress.kubernetes.io~1forwarding-rule
-        - /metadata/annotations/ingress.kubernetes.io~1target-proxy
-        - /metadata/annotations/ingress.kubernetes.io~1url-map
   syncPolicy:
     automated:
       prune: true
