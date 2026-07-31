@@ -18,7 +18,7 @@ frontend:
     name: hr-frontend
     tag: "be3487b"
 ingress:
-  enabled: true
+  enabled: false
   host: hr-dev.local
   staticIpName: ip-hr-dev
 networkPolicy:
