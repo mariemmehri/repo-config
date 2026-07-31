@@ -43,6 +43,10 @@ ingress:
   enabled: false
   host: ""
   staticIpName: ""
+  tls:
+    enabled: false
+    secretName: ""
+    issuerName: ""
 
 networkPolicy:
   enabled: true

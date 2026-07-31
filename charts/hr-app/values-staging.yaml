@@ -21,5 +21,9 @@ ingress:
   enabled: true
   host: hr-staging.local
   staticIpName: ip-hr-staging
+  tls:
+    enabled: true
+    secretName: hr-staging-tls
+    issuerName: local-ca-issuer
 networkPolicy:
   enabled: true
