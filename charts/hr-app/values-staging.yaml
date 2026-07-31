@@ -24,7 +24,7 @@ frontend:
     tag: "ddfc164"
 ingress:
   enabled: true
-  host: HR4YOU.com
+  host: hr4you.com
   staticIpName: ip-hr-staging
   tls:
     enabled: true
