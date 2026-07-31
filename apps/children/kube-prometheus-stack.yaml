@@ -105,10 +105,22 @@ spec:
             enabled: true
             size: 1Gi
             storageClassName: standard-rwo
-          # No adminPassword set on purpose: the chart auto-generates the
-          # "kube-prometheus-stack-grafana" secret (admin-user/admin-password),
-          # same pattern as argocd-initial-admin-secret — never commit a plaintext
-          # credential here.
+          # admin.existingSecret points at a Secret created once out-of-band
+          # (kubectl create secret generic kube-prometheus-stack-grafana-admin
+          # -n monitoring --from-literal=admin-user=admin
+          # --from-literal=admin-password=<random>), never committed to git.
+          # Without existingSecret, the chart's default random-password
+          # generation re-runs on every ArgoCD template render (Helm's
+          # `lookup` returns empty in ArgoCD's rendering sandbox), producing a
+          # new Secret content -> new checksum/secret pod annotation -> a
+          # rolling restart on every sync, which deadlocks against the
+          # ReadWriteOnce PVC (RollingUpdate can't attach the new pod's volume
+          # while the old pod still holds it, and can't kill the old pod
+          # first since maxUnavailable rounds down to 0 on a single replica).
+          admin:
+            existingSecret: kube-prometheus-stack-grafana-admin
+            userKey: admin-user
+            passwordKey: admin-password
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
