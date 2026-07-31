@@ -19,7 +19,10 @@ frontend:
     tag: "2e5169e"
 ingress:
   enabled: true
-  host: hr-staging.local
+  host: 34-107-215-173.sslip.io
   staticIpName: ip-hr-staging
+  tls:
+    enabled: true
+    managedCertificateName: hr-staging-cert
 networkPolicy:
   enabled: true
