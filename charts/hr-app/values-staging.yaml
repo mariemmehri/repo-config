@@ -5,7 +5,7 @@ backend:
   replicas: 2
   image:
     name: hr-backend
-    tag: "2e5169e"
+    tag: "ddfc164"
   autoscaling:
     enabled: true
     minReplicas: 2
@@ -21,7 +21,7 @@ frontend:
   replicas: 1
   image:
     name: hr-frontend
-    tag: "2e5169e"
+    tag: "ddfc164"
 ingress:
   enabled: true
   host: hr-staging.local
