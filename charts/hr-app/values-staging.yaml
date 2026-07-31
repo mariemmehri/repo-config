@@ -2,12 +2,14 @@ registry:
   host: europe-west1-docker.pkg.dev
   repository: pfe-2026-495220/registry-staging-pfe
 backend:
-  replicas: 1
+  replicas: 2
   image:
     name: hr-backend
     tag: "2e5169e"
   autoscaling:
     enabled: true
+    minReplicas: 2
+    maxReplicas: 4
   database:
     enabled: true
     secretName: "pg-staging-app"
