@@ -245,7 +245,8 @@ yq eval '.backend.image.tag = strenv(IMAGE_TAG) | .frontend.image.tag = strenv(I
 - **`HorizontalPodAutoscaler`** sur `hr-backend`, activé en staging et prod.
 - **Trois `NetworkPolicy`** (deny-all + isolation backend/frontend), activées par défaut.
 - **PostgreSQL réel** via CloudNativePG, un cluster par environnement — pas de base en mémoire.
-- **Pas encore implémenté** : TLS/HTTPS sur l'Ingress, `BackendConfig`/`FrontendConfig` GCE, domaine public/DNS, `securityContext` Kubernetes (`runAsNonRoot` etc.) sur les Deployments, observabilité (Prometheus/Grafana), External Secrets Operator.
+- **Observabilité** : `kube-prometheus-stack` (Prometheus + Grafana + Alertmanager) déployé cluster-wide via `apps/children/kube-prometheus-stack.yaml`, namespace `monitoring`. Accès Grafana par `kubectl port-forward` (pas d'Ingress public), mot de passe admin dans le secret auto-généré `kube-prometheus-stack-grafana`. Les `Cluster` CNPG ne remontent pas encore leurs métriques (`cluster.monitoring.enabled: false` dans `cnpg-cluster-*.yaml`) — activation prévue dans un commit séparé.
+- **Pas encore implémenté** : TLS/HTTPS sur l'Ingress, `BackendConfig`/`FrontendConfig` GCE, domaine public/DNS, `securityContext` Kubernetes (`runAsNonRoot` etc.) sur les Deployments, External Secrets Operator.
 
 ---
 
