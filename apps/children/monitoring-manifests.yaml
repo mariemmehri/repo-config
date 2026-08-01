@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-manifests
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mariemmehri/repo-config
+    targetRevision: main
+    path: manifests/monitoring
+    directory:
+      # The dashboard ConfigMap lives one level down in
+      # manifests/monitoring/dashboards/ — ArgoCD's directory source does
+      # NOT recurse into subfolders by default (same class of trap as
+      # root-app.yaml's path needing to be apps/children, not apps).
+      recurse: true
+      # The raw Grafana dashboard JSON sitting next to the ConfigMap YAML
+      # has no apiVersion/kind — it's not a Kubernetes manifest, it's data
+      # the ConfigMap embeds. Without this exclude, ArgoCD's directory
+      # source tries to parse it as a resource too and errors on a file
+      # that was never meant to be applied on its own.
+      exclude: "dashboards/*.json"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
