@@ -1,0 +1,152 @@
+{
+  "title": "Staging Overview",
+  "uid": "staging-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "timezone": "browser",
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "tags": ["staging", "infra"],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Pods — état (staging)",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "kube_pod_status_phase{namespace=\"staging\", phase=\"Running\"} == 1",
+          "format": "table",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Redémarrages de conteneurs (staging)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "kube_pod_container_status_restarts_total{namespace=\"staging\"}",
+          "legendFormat": "{{pod}} / {{container}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Replicas — hr-backend / hr-frontend (réel vs voulu)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "kube_deployment_status_replicas{namespace=\"staging\"}",
+          "legendFormat": "{{deployment}} réel"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "kube_deployment_spec_replicas{namespace=\"staging\"}",
+          "legendFormat": "{{deployment}} voulu"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "HPA hr-backend (réel / min / max)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"staging\", horizontalpodautoscaler=\"hr-backend\"}",
+          "legendFormat": "réel"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "kube_horizontalpodautoscaler_spec_min_replicas{namespace=\"staging\", horizontalpodautoscaler=\"hr-backend\"}",
+          "legendFormat": "min"
+        },
+        {
+          "refId": "C",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"staging\", horizontalpodautoscaler=\"hr-backend\"}",
+          "legendFormat": "max"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "CPU par pod (staging)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"staging\", container!=\"\", container!=\"POD\"}[5m])) by (pod)",
+          "legendFormat": "{{pod}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Mémoire par pod (staging)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(container_memory_working_set_bytes{namespace=\"staging\", container!=\"\", container!=\"POD\"}) by (pod)",
+          "legendFormat": "{{pod}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "PVC pg-staging — statut",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "kube_persistentvolumeclaim_status_phase{namespace=\"staging\", phase=\"Bound\"} == 1",
+          "legendFormat": "{{persistentvolumeclaim}} Bound"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Logs — non disponible",
+      "type": "text",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 28 },
+      "options": {
+        "mode": "markdown",
+        "content": "**Pas de logs ici.** kube-prometheus-stack est un stack métriques uniquement (Prometheus scrape des séries temporelles, pas de logs). Pour agréger les logs des pods `staging`, il faut soit une stack de logs dédiée (Loki + Promtail/Alloy), soit un data source Grafana pointant vers Google Cloud Logging (GKE y envoie déjà tous les stdout/stderr par défaut). Aucune des deux n'est encore déployée — décision à prendre séparément avant d'ajouter des panels de logs ici."
+      }
+    }
+  ]
+}

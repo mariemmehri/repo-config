@@ -62,9 +62,13 @@ spec:
           resources:
             requests:
               cpu: 100m
-              memory: 128Mi
+              memory: 192Mi
             limits:
-              memory: 256Mi
+              # 256Mi OOMKilled the grafana container in practice (steady-state
+              # usage ~280-300Mi with the dashboard/datasources sidecars
+              # loaded) — confirmed live via `kubectl describe pod` showing
+              # Reason: OOMKilled, Exit Code: 137.
+              memory: 512Mi
           # admin.existingSecret points at a Secret created once out-of-band
           # (kubectl create secret generic kube-prometheus-stack-grafana-admin
           # -n monitoring --from-literal=admin-user=admin
