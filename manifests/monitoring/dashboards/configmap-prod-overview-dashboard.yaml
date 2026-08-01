@@ -1,0 +1,164 @@
+# Deployed copy of the sibling prod-overview-dashboard.json. Kept in sync
+# by hand (no templating engine in this raw-manifest path) — see
+# configmap-staging-overview-dashboard.yaml for the full rationale.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prod-overview-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  prod-overview-dashboard.json: |
+    {
+      "title": "Prod Overview",
+      "uid": "prod-overview",
+      "schemaVersion": 39,
+      "version": 1,
+      "editable": true,
+      "timezone": "browser",
+      "time": { "from": "now-6h", "to": "now" },
+      "refresh": "30s",
+      "tags": ["prod", "infra"],
+      "panels": [
+        {
+          "id": 1,
+          "title": "Pods — état (prod)",
+          "type": "table",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "kube_pod_status_phase{namespace=\"prod\", phase=\"Running\"} == 1",
+              "format": "table",
+              "instant": true
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Redémarrages de conteneurs (prod)",
+          "type": "timeseries",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "kube_pod_container_status_restarts_total{namespace=\"prod\"}",
+              "legendFormat": "{{pod}} / {{container}}"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Replicas — hr-backend / hr-frontend (réel vs voulu)",
+          "type": "timeseries",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "kube_deployment_status_replicas{namespace=\"prod\"}",
+              "legendFormat": "{{deployment}} réel"
+            },
+            {
+              "refId": "B",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "kube_deployment_spec_replicas{namespace=\"prod\"}",
+              "legendFormat": "{{deployment}} voulu"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "HPA hr-backend (réel / min / max)",
+          "type": "timeseries",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"prod\", horizontalpodautoscaler=\"hr-backend\"}",
+              "legendFormat": "réel"
+            },
+            {
+              "refId": "B",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "kube_horizontalpodautoscaler_spec_min_replicas{namespace=\"prod\", horizontalpodautoscaler=\"hr-backend\"}",
+              "legendFormat": "min"
+            },
+            {
+              "refId": "C",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"prod\", horizontalpodautoscaler=\"hr-backend\"}",
+              "legendFormat": "max"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "title": "CPU par pod (prod)",
+          "type": "timeseries",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+          "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"prod\", container!=\"\", container!=\"POD\"}[5m])) by (pod)",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "title": "Mémoire par pod (prod)",
+          "type": "timeseries",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+          "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(container_memory_working_set_bytes{namespace=\"prod\", container!=\"\", container!=\"POD\"}) by (pod)",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "title": "PVC pg-prod — statut (HA, 3 instances)",
+          "type": "stat",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 4, "w": 24, "x": 0, "y": 24 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "kube_persistentvolumeclaim_status_phase{namespace=\"prod\", phase=\"Bound\"} == 1",
+              "legendFormat": "{{persistentvolumeclaim}} Bound"
+            }
+          ]
+        },
+        {
+          "id": 8,
+          "title": "Logs — non disponible",
+          "type": "text",
+          "gridPos": { "h": 4, "w": 24, "x": 0, "y": 28 },
+          "options": {
+            "mode": "markdown",
+            "content": "**Pas de logs ici.** kube-prometheus-stack est un stack métriques uniquement. `kubectl logs` ou la console GCP pour l'instant."
+          }
+        }
+      ]
+    }
