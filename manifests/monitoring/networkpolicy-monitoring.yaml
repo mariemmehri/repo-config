@@ -85,11 +85,28 @@ spec:
 # kube-apiserver access — needed by three separate components (the
 # Prometheus-Operator reconciling ServiceMonitor/PrometheusRule CRDs,
 # kube-state-metrics listing cluster objects, and Prometheus's own
-# "kubernetes" scrape job for API server metrics). Scoped by destination
-# namespace (default, where the `kubernetes` Service ClusterIP lives) rather
-# than by pod label for the same reason as monitoring-internal above: three
-# different pods would need three different, unverified label selectors for
-# one shared, well-known, low-risk destination.
+# "kubernetes" scrape job for API server metrics).
+#
+# A namespaceSelector-on-"default" version of this rule was tried first and
+# empirically confirmed NOT to work, live on this cluster: kube-state-metrics
+# logged "Tested communication with server" once, then exited (exitCode 2)
+# after ~30s with no further output — a client-side timeout, not an RBAC or
+# app error. Confirmed by direct test: `kubectl exec` a wget from a
+# monitoring pod to the `kubernetes` Service's real backend
+# (`kubectl get endpoints kubernetes -n default` -> 10.0.1.2:443) timed out;
+# the exact same request from a pod in `argocd` (no NetworkPolicy at all)
+# succeeded immediately. Root cause: 10.0.1.2 is the GKE master's endpoint,
+# not a normal pod — Cilium/GKE Dataplane V2 has no pod/namespace identity to
+# match a namespaceSelector against for that destination, so the rule silently
+# never applies. Same class of GKE-control-plane-traffic quirk as CNPG's
+# metadata-server rewrite issue (manifests/cnpg-network-policy*/networkpolicy-postgres.yaml),
+# different mechanism. An ipBlock is the only thing that actually works here —
+# this IS the officially recommended pattern for kube-apiserver egress
+# specifically, unlike the DNS ClusterIP ipBlock that was abandoned (see
+# Issue 4): there is no pod-backed alternative to fall back to for this one.
+# Caveat: 10.0.1.2 is this cluster's current master endpoint — reconfirm with
+# `kubectl get endpoints kubernetes -n default` after any cluster
+# recreate/master IP change, it is not guaranteed to stay this value forever.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -101,9 +118,8 @@ spec:
     - Egress
   egress:
     - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: default
+        - ipBlock:
+            cidr: 10.0.1.2/32
       ports:
         - protocol: TCP
           port: 443

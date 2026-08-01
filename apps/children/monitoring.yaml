@@ -50,6 +50,16 @@ spec:
         prometheusOperator:
           admissionWebhooks:
             enabled: false
+          # admissionWebhooks.enabled: false alone is NOT enough — verified
+          # live: the operator Deployment and its own ServiceMonitor still
+          # unconditionally mount/reference a TLS secret
+          # (monitoring-kube-prometheus-admission) because tls.enabled is a
+          # SEPARATE flag, defaulting true independently of
+          # admissionWebhooks. With webhooks off, nothing creates that
+          # secret, so the operator pod got stuck in ContainerCreating
+          # (FailedMount) on a live sync — this flag has to be off too.
+          tls:
+            enabled: false
 
         prometheus:
           prometheusSpec:
