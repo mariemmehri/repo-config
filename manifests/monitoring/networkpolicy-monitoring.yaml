@@ -1,0 +1,136 @@
+# Every other namespace in this cluster runs default-deny-all + explicit
+# scoped rules (charts/hr-app/templates/networkpolicy-*.yaml) — leaving
+# "monitoring" wide open would be the one namespace that doesn't follow that
+# posture, for no good reason. This mirrors it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Traffic *within* monitoring (Prometheus <-> Alertmanager, Grafana ->
+# Prometheus, Prometheus -> kube-state-metrics/node-exporter) is left open
+# pod-to-pod rather than pinned to each component's exact
+# app.kubernetes.io/name label. Those labels are chart-version-specific and
+# unverified against a live render of kube-prometheus-stack 87.21.0 in this
+# cluster; guessing wrong here fails silently (dashboards show "No data",
+# nothing errors) rather than loudly, which is worse than not having the
+# policy at all. This keeps the namespace *boundary* zero-trust (nothing
+# outside "monitoring" can reach in or be reached, except the two rules
+# below) while accepting an open internal mesh among five stack components
+# that are all part of the observability stack itself, not untrusted
+# workloads — a bounded, documented compromise, same spirit as CNPG's
+# fully-open egress in manifests/cnpg-network-policy*/networkpolicy-postgres.yaml.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: monitoring-internal
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}
+  egress:
+    - to:
+        - podSelector: {}
+---
+# DNS — identical two-podSelector pattern already proven in this cluster
+# (charts/hr-app/templates/networkpolicy-backend.yaml); do NOT switch this
+# to an ipBlock on kube-dns's ClusterIP, see docs/issues-rencontrees.md
+# Issue 4 for why that was abandoned (not stable across a cluster recreate).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: monitoring-egress-dns
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: node-local-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# kube-apiserver access — needed by three separate components (the
+# Prometheus-Operator reconciling ServiceMonitor/PrometheusRule CRDs,
+# kube-state-metrics listing cluster objects, and Prometheus's own
+# "kubernetes" scrape job for API server metrics). Scoped by destination
+# namespace (default, where the `kubernetes` Service ClusterIP lives) rather
+# than by pod label for the same reason as monitoring-internal above: three
+# different pods would need three different, unverified label selectors for
+# one shared, well-known, low-risk destination.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: monitoring-egress-apiserver
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: default
+      ports:
+        - protocol: TCP
+          port: 443
+---
+# The one genuine cross-namespace scrape path: Prometheus reaching
+# hr-backend in staging on /actuator/prometheus. Staging-only, matching the
+# ServiceMonitor's namespaceSelector in servicemonitor-hr-backend.yaml — add
+# dev/prod rules here in lockstep if that ServiceMonitor's scope is ever
+# widened, or Prometheus will have a target it's configured to scrape but
+# can't reach.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: monitoring-egress-hr-backend-staging
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: staging
+          podSelector:
+            matchLabels:
+              app: hr-backend
+      ports:
+        - protocol: TCP
+          port: 8081

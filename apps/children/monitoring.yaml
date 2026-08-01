@@ -1,0 +1,176 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # Same wave as cnpg-operator: no ordering dependency between the two
+    # (Prometheus doesn't need CNPG, CNPG doesn't need Prometheus), but the
+    # kube-prometheus-stack chart's CRDs (ServiceMonitor, PrometheusRule...)
+    # must exist before manifests/monitoring's ServiceMonitor Application
+    # (see monitoring-manifests.yaml, wave "0") — same CRD-before-consumer
+    # ordering reason as cnpg-operator (-1) -> cnpg-cluster-staging (0).
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 87.21.0
+    helm:
+      values: |
+        # --- GKE-managed control plane: these three components run on
+        # Google-managed master nodes, not on anything in this cluster's
+        # node pool, so there is no endpoint here for Prometheus to scrape.
+        # Leaving them enabled produces permanently-firing "target down"
+        # alerts for targets that were never reachable in the first place —
+        # same rationale as modules/gke's datapath_provider comment in
+        # repo-infrastructure for why GKE-managed pieces get treated
+        # differently from self-managed ones.
+        kubeControllerManager:
+          enabled: false
+        kubeScheduler:
+          enabled: false
+        kubeEtcd:
+          enabled: false
+        # GKE Dataplane V2 (modules/gke's datapath_provider =
+        # "ADVANCED_DATAPATH") replaces kube-proxy with Cilium/eBPF — no
+        # kube-proxy pods exist on this cluster to scrape either.
+        kubeProxy:
+          enabled: false
+
+        # No cert-manager-issued cert is wired up for the operator's
+        # validating/mutating webhooks in this minimal setup, and admission
+        # webhooks mean the kube-apiserver must reach back into the operator
+        # pod — one more cross-namespace ingress path to reason about for no
+        # real benefit here. Disabled rather than half-wired; see
+        # guide-observabilite.md "Ce qui n'existe pas encore".
+        prometheusOperator:
+          admissionWebhooks:
+            enabled: false
+
+        prometheus:
+          prometheusSpec:
+            # 7 days, not the chart default — this is a staging-only,
+            # single-replica install (no Thanos/Cortex for long-term
+            # storage), sized to fit the 10Gi volumeClaimTemplate below.
+            retention: 7d
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                cpu: 500m
+                memory: 1Gi
+            storageSpec:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: standard-rwo
+                  accessModes: ["ReadWriteOnce"]
+                  resources:
+                    requests:
+                      storage: 10Gi
+
+        alertmanager:
+          alertmanagerSpec:
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
+            # No storageSpec: Alertmanager's own state (silences, notification
+            # log) is ephemeral here and lost on pod restart — acceptable
+            # since no external receiver is configured yet anyway (see
+            # guide-observabilite.md). Revisit together if a real receiver
+            # is added later.
+
+        grafana:
+          # Never adminPassword: <plaintext> — this repo never commits
+          # secrets (same principle as terraform.tfvars/backend.hcl staying
+          # gitignored in repo-infrastructure). The referenced Secret is
+          # created out-of-band; see guide-observabilite.md for the exact
+          # kubectl command.
+          admin:
+            existingSecret: grafana-admin-credentials
+            userKey: admin-user
+            passwordKey: admin-password
+          persistence:
+            enabled: true
+            size: 2Gi
+            storageClassName: standard-rwo
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          # Detects ConfigMaps labeled grafana_dashboard: "1" in this
+          # namespace and loads them automatically — see
+          # manifests/monitoring/dashboards/. No manual UI import.
+          sidecar:
+            dashboards:
+              enabled: true
+              label: grafana_dashboard
+              labelValue: "1"
+            datasources:
+              # Pinned explicitly rather than relying on whatever this chart
+              # version defaults its auto-provisioned Prometheus datasource
+              # UID to — hr-platform-dashboard.json hardcodes this same
+              # "prometheus" UID in every panel target, so the two must
+              # match or panels show "datasource not found" with no other
+              # symptom.
+              defaultDatasourceEnabled: true
+              uid: prometheus
+          # ClusterIP only — no public Ingress. Access is kubectl
+          # port-forward, same pattern as ArgoCD's own UI
+          # (environments/staging/outputs.tf's argocd_portforward output in
+          # repo-infrastructure).
+          service:
+            type: ClusterIP
+
+        # Both subcharts: the top-level enabled flag (nodeExporter.enabled /
+        # kubeStateMetrics.enabled) is kube-prometheus-stack's OWN toggle
+        # (Chart.yaml dependency `condition:`), but each subchart reads its
+        # OWN values under its own chart-name key below — an easy-to-miss
+        # split since the two keys don't match.
+        nodeExporter:
+          enabled: true
+        prometheus-node-exporter:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 50Mi
+            limits:
+              cpu: 100m
+              memory: 100Mi
+
+        kubeStateMetrics:
+          enabled: true
+        kube-state-metrics:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 100Mi
+            limits:
+              cpu: 100m
+              memory: 200Mi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /status/terminatingReplicas
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -1,0 +1,30 @@
+# Staging-only for now (deliberate — see guide-observabilite.md): the node
+# pool's real capacity was only just confirmed, so we're validating actual
+# resource usage against one namespace before turning this on for dev/prod
+# too. Add matchNames entries for dev/prod here once that's confirmed.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: hr-backend
+  namespace: monitoring
+  labels:
+    # kube-prometheus-stack's Prometheus CR only watches ServiceMonitors
+    # carrying `release: <helm release name>` by default
+    # (serviceMonitorSelectorNilUsesHelmValues). The Application in
+    # monitoring.yaml is named "monitoring" and doesn't override
+    # source.helm.releaseName, so ArgoCD's Helm release name is "monitoring"
+    # too — this label must track that name, or the ServiceMonitor exists
+    # but Prometheus silently never picks it up (no error, just no scrape,
+    # same class of silent-failure as root-app.yaml's path requirement).
+    release: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - staging
+  selector:
+    matchLabels:
+      app: hr-backend
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 30s

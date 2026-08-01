@@ -9,6 +9,7 @@ spec:
   selector:
     app: hr-backend
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 8081
       targetPort: {{ .Values.backend.port }}

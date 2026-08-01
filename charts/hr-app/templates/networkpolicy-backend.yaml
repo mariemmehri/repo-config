@@ -31,6 +31,21 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.backend.port }}
+    # Prometheus (namespace "monitoring") scraping /actuator/prometheus —
+    # same port as the rest of the API (see application.properties in
+    # repo-app), so this is a new ingress source, not a new port. Scoped to
+    # the monitoring namespace as a whole (not a specific pod label) since
+    # kube-prometheus-stack's exact Prometheus pod labels aren't pinned down
+    # to a verified value here — see
+    # manifests/monitoring/networkpolicy-monitoring.yaml's egress rule,
+    # which is the mirror image of this one.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.port }}
   egress:
     # GKE's NodeLocal DNSCache intercepts kube-dns-ClusterIP:53 traffic and
     # answers from a per-node `node-local-dns` pod instead — confirmed live via

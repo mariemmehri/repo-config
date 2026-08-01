@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-manifests
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # Must land after monitoring.yaml's CRDs exist (wave "-1") — the
+    # ServiceMonitor kind in this path doesn't exist until kube-prometheus-stack
+    # installs it. Same CRD-before-consumer relationship as
+    # cnpg-operator (-1) -> cnpg-cluster-staging (0). The NetworkPolicy
+    # objects bundled in the same path have no such ordering requirement,
+    # they just ride along in the same Application for one less file to
+    # manage.
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mariemmehri/repo-config
+    targetRevision: main
+    path: manifests/monitoring
+    directory:
+      # The dashboard ConfigMap lives one level down in
+      # manifests/monitoring/dashboards/ — ArgoCD's directory source does
+      # NOT recurse into subfolders by default (same class of trap as
+      # root-app.yaml's path needing to be apps/children, not apps).
+      # Without this, dashboards/ would be silently ignored while
+      # monitoring-manifests still reports Synced/Healthy.
+      recurse: true
+      # The raw Grafana dashboard JSON sitting next to the ConfigMap YAML
+      # has no apiVersion/kind — it's not a Kubernetes manifest, it's data
+      # the ConfigMap embeds. Without this exclude, ArgoCD's directory
+      # source tries to parse it as a resource too and the Application
+      # errors on a file that was never meant to be applied on its own.
+      exclude: "dashboards/*.json"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
