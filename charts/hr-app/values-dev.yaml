@@ -5,7 +5,7 @@ backend:
   replicas: 1
   image:
     name: hr-backend
-    tag: "ea7b058"
+    tag: "4b81870"
   autoscaling:
     enabled: false
   database:
@@ -16,7 +16,7 @@ frontend:
   replicas: 1
   image:
     name: hr-frontend
-    tag: "ea7b058"
+    tag: "4b81870"
 ingress:
   enabled: false
   host: hr-dev.local
