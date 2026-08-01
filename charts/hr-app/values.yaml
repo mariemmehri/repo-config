@@ -14,7 +14,15 @@ backend:
     cnpgClusterName: ""
   resources:
     requests:
-      cpu: "100m"
+      # Lowered from 100m so idle CPU usage (~2-5m observed across
+      # dev/staging/prod) reads as a more meaningful percentage against
+      # the HPA target (dev/staging ~40-45%, prod ~20% given its lower
+      # baseline usage) instead of 2-6%. Trade-off: this is the same
+      # denominator the HPA (staging/prod, 70% target) scales against,
+      # so it also makes autoscaling meaningfully more sensitive to real
+      # traffic than it was at 100m — a deliberate choice for demo
+      # visibility, not a capacity-planning number.
+      cpu: "10m"
       memory: "256Mi"
     limits:
       cpu: "300m"
