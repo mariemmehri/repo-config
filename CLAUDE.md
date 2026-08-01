@@ -27,14 +27,11 @@ repo-config/
 │       ├── cnpg-cluster-prod.yaml      # sync-wave 0, no automated syncPolicy — CNPG `Cluster` CR `pg-prod` (Postgres 16, db/owner `hrapp`, 3 instances/HA), ns prod, GCS backups via Workload Identity
 │       ├── cnpg-network-policy-dev.yaml    # sync-wave -1, automated — NetworkPolicy allowing port 5432 into pg-dev from dev + cnpg-system
 │       ├── cnpg-network-policy.yaml    # sync-wave -1, automated — NetworkPolicy allowing port 5432 into pg-staging from staging + cnpg-system
-│       ├── cnpg-network-policy-prod.yaml   # sync-wave -1, automated (unlike cnpg-cluster-prod.yaml) — NetworkPolicy allowing port 5432 into pg-prod from prod + cnpg-system
-│       ├── monitoring.yaml             # sync-wave -1 — kube-prometheus-stack (chart 87.21.0: Prometheus/Alertmanager/Grafana/node-exporter/kube-state-metrics), ns monitoring
-│       └── monitoring-manifests.yaml   # sync-wave 0, directory.recurse: true — raw manifests at manifests/monitoring/ (ServiceMonitor for hr-backend/staging, monitoring's own NetworkPolicy set, Grafana dashboard ConfigMap)
+│       └── cnpg-network-policy-prod.yaml   # sync-wave -1, automated (unlike cnpg-cluster-prod.yaml) — NetworkPolicy allowing port 5432 into pg-prod from prod + cnpg-system
 ├── manifests/
 │   ├── cnpg-network-policy/networkpolicy-postgres.yaml       # raw manifest cnpg-network-policy.yaml (staging) points at
 │   ├── cnpg-network-policy-dev/networkpolicy-postgres.yaml   # raw manifest cnpg-network-policy-dev.yaml points at
-│   ├── cnpg-network-policy-prod/networkpolicy-postgres.yaml  # raw manifest cnpg-network-policy-prod.yaml points at
-│   └── monitoring/            # raw manifest monitoring-manifests.yaml points at — see docs/guide-observabilite.md
+│   └── cnpg-network-policy-prod/networkpolicy-postgres.yaml  # raw manifest cnpg-network-policy-prod.yaml points at
 ├── charts/hr-app/
 │   ├── Chart.yaml               # no `dependencies:` — CNPG is deployed as independent ArgoCD Applications above, not a Helm sub-chart dependency of hr-app
 │   ├── values.yaml               # chart defaults — deliberately non-deployable (empty registry, tag "UNSET")
@@ -123,8 +120,6 @@ The GCE Ingress wiring (commits `4e4784d`, `b04973b`, both on `2026-07-30`) touc
 
 `README.md`, `docs/guide-argocd-gitops.md`, `docs/guide-helm-chart.md`, `docs/architecture-globale.md`, `docs/decisions-architecture.md`, and `docs/lifecycle-pipeline.md` are *also* stale on environment count — all of them predate `dev`/`prod` and still describe `apps/children/` as holding a single `staging.yaml`/`hr-staging` Application and the chart as having only `values.yaml`+`values-staging.yaml`. Three environments exist today (`hr-dev`, `hr-staging`, `hr-prod`); see App-of-Apps above. None of these docs mention CNPG/Postgres at all (not even the single-env staging version) — that entire subsystem, across all three environments, is undocumented outside this file and the inline comments in `apps/children/cnpg-*.yaml`/`manifests/cnpg-network-policy*/`. Trust this file and the actual manifests over any of those docs for current environment/CNPG state; they were left as-is rather than rewritten wholesale (see repo convention of flagging staleness here instead of chasing every doc).
 
-`docs/guide-securite.md`'s NetworkPolicy section (written before the monitoring stack existed) still describes only the three `hr-app` chart templates and doesn't mention `networkpolicy-backend.yaml`'s fourth ingress rule (namespace `monitoring` on `backend.port`) or the new `monitoring` namespace's own five-object `NetworkPolicy` set — see `docs/guide-observabilite.md` instead for the current, complete picture there. Same convention as above: flagged here rather than rewriting `guide-securite.md`.
-
 A Postgres `StatefulSet` + HPA briefly existed in `charts/hr-app` (commits `fa12a0c`, `3c86ac4`) and was fully removed (`83792b4`) — don't go looking for a Postgres template or `Chart.yaml` dependency there, that stays gone. Postgres came back afterward (commits `2058586`, `6422edf`) as a separate CNPG `Cluster` CR managed by its own `apps/children/cnpg-*.yaml` Applications, wired to `hr-backend` only via the `backend.database.enabled` env vars in `deployment-backend.yaml` — architecturally unrelated to the removed `StatefulSet` approach. What started as staging-only CNPG later grew a `dev` cluster and an HA `prod` cluster (commits `3038cb1`, `e6d4321`), with staging itself scaled back down to single-instance (`340416d`) along the way.
 
 ## `docs/` index
@@ -137,7 +132,6 @@ Detailed, self-contained (French) guides — read the relevant one before making
 - `docs/guide-hpa.md` — `hpa-backend.yaml` config, per-env min/max/target CPU, verification commands, load-test Job script (`repo-app/scripts/load-test.sh`), current gaps (no `behavior` stabilization window, not yet run for real)
 - `docs/guide-deploiement-infra.md` — Terraform provisioning (lives in `repo-infrastructure`, referenced from here for the ArgoCD bootstrap handoff)
 - `docs/guide-securite.md` — every real security control and the concrete failure it prevents (WIF, Trivy, NetworkPolicy/Dataplane V2, Shielded Nodes, Binary Authorization, IAM scoping, Checkov) plus an explicit "not implemented yet" list
-- `docs/guide-observabilite.md` — kube-prometheus-stack (Prometheus/Grafana/Alertmanager), `staging`-only scope and why, sizing rationale, `monitoring` namespace NetworkPolicy compromises, explicit "not implemented yet" list (retention, HA, Alertmanager receivers, CNPG connection metrics)
 - `docs/decisions-architecture.md` — ADRs: Helm vs Terraform `kubernetes` provider, ArgoCD pull-based vs push-from-CI, why no Ansible
 - `docs/issues-rencontrees.md` — real incidents with root cause and fix: ArgoCD CRD sync race, spot-node `kubectl wait` race, Trivy-blocked Tomcat CVEs, DNS-egress NetworkPolicy vs. NodeLocal DNSCache (Issue 4)
 - `GITOPS_PFE.md` (repo root) — original note on the ArgoCD CRD race; superseded/expanded by `docs/issues-rencontrees.md` Issue 1

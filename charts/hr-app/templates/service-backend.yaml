@@ -3,14 +3,6 @@ kind: Service
 metadata:
   name: hr-backend
   namespace: {{ .Release.Namespace }}
-  labels:
-    # Required for manifests/monitoring/servicemonitor-hr-backend.yaml:
-    # ServiceMonitor.spec.selector matches a Service's OWN metadata.labels,
-    # not its spec.selector (which only picks pods) — confirmed live, this
-    # Service had no labels at all before, so the ServiceMonitor matched
-    # zero Services and Prometheus silently had zero active targets for
-    # hr-backend despite the Endpoints being perfectly healthy.
-    app: hr-backend
   annotations:
     cloud.google.com/neg: '{"ingress": true}'
 spec:
