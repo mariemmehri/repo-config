@@ -5,7 +5,7 @@ backend:
   replicas: 2
   image:
     name: hr-backend
-    tag: "ddfc164"
+    tag: "93d396b"
   autoscaling:
     enabled: true
     minReplicas: 2
@@ -21,7 +21,7 @@ frontend:
   replicas: 1
   image:
     name: hr-frontend
-    tag: "ddfc164"
+    tag: "93d396b"
 ingress:
   enabled: true
   host: hr4you.com
