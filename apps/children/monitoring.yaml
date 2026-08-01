@@ -65,6 +65,20 @@ spec:
               memory: 128Mi
             limits:
               memory: 256Mi
+          # admin.existingSecret points at a Secret created once out-of-band
+          # (kubectl create secret generic kube-prometheus-stack-grafana-admin
+          # -n monitoring --from-literal=admin-user=admin
+          # --from-literal=admin-password=<random>), never committed to git.
+          # Without existingSecret, the chart's default random-password
+          # generation re-runs on every ArgoCD template render (Helm's
+          # `lookup` returns empty in ArgoCD's rendering sandbox), producing a
+          # new Secret -> new checksum/secret pod annotation -> a rolling
+          # restart on every sync (already hit and reverted twice in this
+          # repo's history before this fix).
+          admin:
+            existingSecret: kube-prometheus-stack-grafana-admin
+            userKey: admin-user
+            passwordKey: admin-password
 
         prometheusOperator:
           resources:
