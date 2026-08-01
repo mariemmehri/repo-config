@@ -177,6 +177,16 @@ spec:
       kind: Deployment
       jsonPointers:
         - /status/terminatingReplicas
+    # GKE's native GCE Ingress controller stamps cloud.google.com/neg onto
+    # every Service in the cluster (not just ones an Ingress references),
+    # same out-of-band annotation trap as hr-ingress's /metadata/annotations
+    # exception in charts/hr-app's ArgoCD children — without this, every
+    # Service the kube-prometheus-stack chart creates flags OutOfSync
+    # forever even though nothing is actually wrong.
+    - group: ""
+      kind: Service
+      jsonPointers:
+        - /metadata/annotations
   syncPolicy:
     automated:
       prune: true

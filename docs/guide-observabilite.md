@@ -68,6 +68,10 @@ Comme les trois autres namespaces (`dev`/`staging`/`prod`, via `charts/hr-app/te
 
 `kubectl port-forward` vers Grafana **n'est pas bloqué** par le default-deny — le port-forward passe par l'apiserver/kubelet, pas par le chemin réseau CNI que les `NetworkPolicy` gouvernent.
 
+## ⚙️ `OutOfSync` faux positif sur les `Service` (annotation GCE)
+
+Le contrôleur GCE Ingress natif de GKE tamponne `cloud.google.com/neg: '{"ingress":true}'` sur **tous** les `Service` du cluster (pas seulement ceux référencés par un `Ingress`) — même piège que l'annotation hors-bande documentée pour `hr-ingress` dans `repo-config/CLAUDE.md`. Sans exception, ArgoCD reporte en permanence `monitoring` comme `OutOfSync` (typiquement vu en premier sur `monitoring-kube-state-metrics`, mais les huit `Service` du namespace y sont exposés) alors que `HEALTH STATUS` reste `Healthy` et que rien n'est réellement cassé. `monitoring.yaml`'s `ignoreDifferences` couvre maintenant `group: "", kind: Service, jsonPointers: [/metadata/annotations]` en plus de l'exception `Deployment` déjà existante.
+
 ---
 
 ## ✅ Ce qui n'existe pas encore (pour éviter toute confusion)
