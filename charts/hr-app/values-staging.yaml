@@ -21,7 +21,7 @@ frontend:
   replicas: 1
   image:
     name: hr-frontend
-    tag: "b5a0cca"
+    tag: "05d02eb"
 ingress:
   enabled: true
   host: hr4you.com
