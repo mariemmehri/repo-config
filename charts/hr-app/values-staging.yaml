@@ -5,7 +5,7 @@ backend:
   replicas: 2
   image:
     name: hr-backend
-    tag: "b5a0cca"
+    tag: "05d02eb"
   autoscaling:
     enabled: true
     minReplicas: 2
