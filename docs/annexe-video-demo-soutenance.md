@@ -226,7 +226,7 @@ git show HEAD -- charts/hr-app/values-dev.yaml   # diff du tag d'image
 Puis sur le cluster :
 ```bash
 kubectl get application hr-dev -n argocd
-kubectl get deployment hr-backend -n dev -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+kubectl get deployment hr-backend -n dev -o jsonpath="{.spec.template.spec.containers[0].image}"
 ```
 
 Dire :
