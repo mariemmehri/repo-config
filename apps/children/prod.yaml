@@ -26,8 +26,11 @@ spec:
     - group: networking.k8s.io
       kind: Ingress
       jsonPointers:
-        - /metadata/annotations
         - /metadata/finalizers
+        - /metadata/annotations/ingress.kubernetes.io~1backends
+        - /metadata/annotations/ingress.kubernetes.io~1forwarding-rule
+        - /metadata/annotations/ingress.kubernetes.io~1target-proxy
+        - /metadata/annotations/ingress.kubernetes.io~1url-map
   # Pas de syncPolicy.automated : la prod ne se synchronise JAMAIS seule.
   # Un commit sur values-prod.yaml met l'app OutOfSync; le déploiement réel
   # exige un sync manuel (UI ArgoCD ou `argocd app sync hr-prod`).
