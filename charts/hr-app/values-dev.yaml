@@ -16,7 +16,7 @@ frontend:
   replicas: 1
   image:
     name: hr-frontend
-    tag: "4af21b7"
+    tag: "d76fd7d"
 ingress:
   enabled: false
   host: hr-dev.local
