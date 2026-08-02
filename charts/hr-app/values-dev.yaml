@@ -5,7 +5,7 @@ backend:
   replicas: 1
   image:
     name: hr-backend
-    tag: "81a9dfa"
+    tag: "4af21b7"
   autoscaling:
     enabled: false
   database:
