@@ -23,5 +23,9 @@ ingress:
   enabled: true
   host: hr4youp.com
   staticIpName: ip-hr-prod
+  tls:
+    enabled: true
+    secretName: hr-prod-tls
+    issuerName: local-ca-issuer
 networkPolicy:
   enabled: true
