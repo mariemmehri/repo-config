@@ -5,7 +5,7 @@ backend:
   replicas: 2
   image:
     name: hr-backend
-    tag: "v2.0.0"
+    tag: "v2.1.0"
   autoscaling:
     enabled: true
     minReplicas: 2
@@ -18,7 +18,7 @@ frontend:
   replicas: 2
   image:
     name: hr-frontend
-    tag: "v2.0.0"
+    tag: "v2.1.0"
 ingress:
   enabled: true
   host: hr4youp.com
